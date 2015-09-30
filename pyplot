@@ -1,0 +1,310 @@
+#!/usr/bin/env python
+
+# -------------- IMPORT LIBRARIES ------------------------
+from math import *
+import sys
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
+from matplotlib.ticker import MultipleLocator
+from matplotlib.ticker import LogLocator
+from mpl_toolkits.mplot3d import Axes3D
+# ------------------- xxx -------------------- LIBRARIES
+
+
+# --------------------- FIGURE SETTINGS -------------------
+"""
+Some of the setting for the plots. These are the
+default settings for all figure.
+"""
+# figure size
+plt.rc('figure', figsize=(8.5, 5.0))
+# font size for axes tics
+plt.rc('font', size=15.0) 
+# linewidth
+plt.rc('lines', linewidth=1.8)
+# axes or frame 
+plt.rc('axes', linewidth=1.5)
+# xticks
+plt.rc('xtick.major', size=6.0, width=1.5)
+plt.rc('xtick.minor', size=3.0, width=1.5)
+# yticks
+plt.rc('ytick.major', size=6.0, width=1.5)
+plt.rc('ytick.minor', size=3.0, width=1.5)
+
+# line colors, blue, black, red, magenta, green
+colors = ['b','k','r','m','g','c']
+# --------------------------- xxx --------------- FIGURE SETTINGS
+
+
+# ------------------- READ FUNCTION FOR DATA FILE  --------------
+"""
+It takes as input the
+1> datafile name 
+2> the column names
+
+It outputs a dataframe
+
+The input file has data in the
+form of columns, separated by white space
+( and NOT comma separated )
+
+The data has to be of the form
+X, Y0, Y1, Y2, etc.
+where we are interested in plotting
+Y's vs X as a line plot.
+All X and Y's must be numeric.
+
+The data file can have comments
+where the comment lines has to
+start with #
+
+We later asign default column names
+as X, Y0, Y1, Y2, etc to all columns
+"""
+# drop comment lines
+# backfill NAN values
+def readcsv(filename,col=[]):
+    f = pd.read_csv(filename,
+                    comment='#',
+                    header=None,
+                    names=col,
+                    sep=r"\s+",
+                    skipinitialspace=True).dropna()
+    f = f.convert_objects(convert_numeric=True)
+    f = f.fillna(method='bfill') 
+    f.index = range(f.shape[0])
+    return f
+# ----------------------- xxx --------------- READ DATA FUNCTION
+
+
+# -------------------- FUNCTION FOR DATAFRAME PLOTTING ----------------
+"""
+The function takes as input 
+a list whose elements are dataframes.
+They are plotted in a grid-like view
+with # columns = ncols
+and # rows = nrows.
+ncols & nrows depend on the number of
+datafiles to be plotted and are to be
+determined depending on the command prompt.
+"""
+
+def dfplot(dframes,
+           figsize=[13,4],
+           nrows=1,ncols=1,
+           legend=True,
+           logx=False,logy=False,
+           xlabel='',ylabel='',
+           titles=[''],
+           save=True,
+           filename=''):
+    fig = plt.figure(figsize=figsize)
+    # max number of figures
+    # that can be included 
+    # in the grid-view
+    figs = nrows*ncols
+    
+    # number of dataframes
+    # we want to plot
+    plts = len( dframes )
+    
+    for i in xrange(plts):
+        ax = fig.add_subplot(nrows,ncols,i+1)
+        if i>=len(titles):
+            titles.append('')               
+        ax = dframes[i].plot(x=dframes[i].columns.values[0],
+                             logy=logy,
+                             logx=logx,
+                             color=colors,
+                             legend=legend,
+                             ax=ax)      
+        ax.legend(loc='best', fancybox=True, framealpha=0.5)
+        
+        # some text
+        if xlabel:
+            ax.set_xlabel(xlabel, fontsize=22)
+
+        ax.set_ylabel(ylabel, fontsize=22)
+        ax.set_title(titles[i], fontsize=20, y=1.05)
+        
+    # grid display spacing
+    fig.tight_layout(w_pad=5.0, h_pad=2.0)
+    if save:
+        if filename:
+            fig.savefig(filename)
+        else:
+            fig.savefig('fig.pdf')
+# -------------------- xxx -------------- PLOTTING DATAFRAME FUNCTION
+
+
+# ------------------- PARSING COMMAND PROMPTS ------------
+"""
+The command line arguments should be of the form
+( and must appear in the order specified )
+1> datafiles (1 or many)
+   Each datafile must have the same number of columns
+   comment lines in data files must begin with '#'
+   ( NOT comma separated data files! )
+2> cols n
+   where, n (integer) is the total column number
+   in each data file
+3> plot option or options (if any) in ANY order, which are
+3a> absy, plots abs(Y) vs X
+3b> absx, plots Y vs abs(X)
+3b> logy, plots log( abs(Y) ) vs X
+3c> logx, plots Y vs log( abs(x) )
+3d> logxy, plots log( abs(Y) ) vs log( abs(X) )
+"""
+
+plot_options = ['absy','absx','absxy','logy','logx','logxy']
+
+# --     --       --      --       --      --        --      --
+# finding out the number of columns in each
+# data files from the cols argument
+if 'cols' not in sys.argv:
+    print 'enter the number of columns as cols int'
+    sys.exit()
+else:
+    for i,j in list( enumerate(sys.argv) ):
+        if j=='cols':
+            try:
+                ncols = int( sys.argv[i+1] )
+            except TypeError:
+                print 'enter column no. (int) after cols'
+                sys.exit()
+            except ValueError:
+                print 'enter column no. (int) after cols'
+                sys.exit()
+            end = i # no. of datafiles!
+
+# naming the cols as X, Y0, Y1, etc
+# to be used by the dataframes to be created
+col = ['X']
+for i in xrange(1,ncols):
+    label = 'Y'+str(i-1)
+    col.append(label)
+# --     --       --      --       --      --       --     --       
+
+# --     --       --      --       --      --       --     --
+# reading in the data files
+# NOTE: all datafiles are entered before 'cols'
+# and creating a list of dataframes
+dframes = []
+titles = []
+for i in xrange( 1,end ):
+    try:
+        # checking if datafile exists
+        # or if no. of cols entered is correct
+        df = readcsv( sys.argv[i],col )
+    except IOError:
+        # file does not exist
+        if sys.argv[i] not in plot_options:
+            s = 'file ' + str( sys.argv[i] ) + ' does not exist'
+            print s
+            sys.exit()
+        else:
+            s = 'plot options must appear after cols'
+            print s
+            sys.exit()
+    except ValueError:
+        # wrong no. of cols entered
+        # NOTE: ensure each datafile has same
+        # number of columns
+        s1 = 'enter correct no. of columns in each file'
+        s2 = ' or check their compatibility'
+        print s1+s2
+        sys.exit()
+    titles.append( 'datafile '+str(i) )
+    if 'absy' in sys.argv \
+       or 'logy' in sys.argv:
+        dfX = df.X
+        dfY = df.ix[:,1:]
+        dfY = dfY.abs()
+        dfY.insert(0,'X',dfX)
+        df = dfY
+        dframes.append( df )
+    elif 'absx' in sys.argv \
+         or 'logx' in sys.argv:
+        dfX = df.X
+        dfX = dfX.abs()
+        dfY = df.ix[:,1:]
+        dfY.insert(0,'X',dfX)
+        df = dfY
+        dframes.append( df )
+    elif 'absxy' in sys.argv \
+         or 'logxy' in sys.argv:
+        dframes.append( df.abs() )
+    else:
+        dframes.append( df )
+# --     --       --      --       --      --       --     --
+
+# --     --       --      --       --      --       --     --
+# no. of plots or data files
+nplots = end - 1
+
+# figuring out the number of columns
+# and rows for the grid-plot
+# depends on the number of datafiles
+if nplots%2==0:
+    nrows = nplots/2
+    ncols = 2
+elif nplots%2==1:
+    if nplots/2==0:
+        nrows = 1
+        ncols = 1
+    else:
+        nrows = nplots/2+1
+        ncols = 2
+# ----------------------- xxx ---------------- COMMAND PROMPTS
+
+
+# -------------------- PLOT OF DATAFILES ------------------
+if 'logy' in sys.argv:
+    dfplot(dframes,
+           nrows=nrows,
+           ncols=ncols,
+           figsize=[7.5*ncols,5*nrows],
+           logy=True,
+           save=True,
+           titles=titles,
+           filename='tmp_pyplot.pdf')
+elif 'logx' in sys.argv:
+    dfplot(dframes,
+           nrows=nrows,
+           ncols=ncols,
+           figsize=[7.5*ncols,5*nrows],
+           logx=True,
+           save=True,
+           titles=titles,
+           filename='tmp_pyplot.pdf')
+elif 'logxy' in sys.argv:
+    dfplot(dframes,
+           nrows=nrows,
+           ncols=ncols,
+           figsize=[7.5*ncols,5*nrows],
+           logx=True,logy=True,
+           save=True,
+           titles=titles,
+           filename='tmp_pyplot.pdf')
+else:
+    dfplot(dframes,
+           nrows=nrows,
+           ncols=ncols,
+           figsize=[7.5*ncols,5*nrows],
+           save=True,
+           titles=titles,
+           filename='tmp_pyplot.pdf')
+# ------------------- xxx ----------------- PLOTS
+
+
+# ----------------- VIEWING THE PLOTS -----------
+# use evince to view the plots
+# it deletes the created .pdf plot files after viewing
+# i.e., after the plot window is closed
+
+os.system( 'evince tmp_pyplot.pdf' )
+os.system( 'rm tmp_pyplot.pdf' )
+# --------------- xxx -------- VIEWS
