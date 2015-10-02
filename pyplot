@@ -18,7 +18,6 @@ from mpl_toolkits.mplot3d import Axes3D
 """
 Some of the setting for the plots. These are the
 default settings for all figure.
-hello world
 """
 # figure size
 plt.rc('figure', figsize=(8.5, 5.0))
