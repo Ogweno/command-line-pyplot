@@ -31,10 +31,10 @@ Lastly, we have several plot options. Currently, we have the following options:
 3. `absxy` -- plots abs(*Y*) vs abs(*X*)
 4. `logy`  -- plots abs(*Y*) vs *X* with log-scale for *Y*
 5. `logx`  -- plots *Y* vs abs(*X*) with log-scale for *X*
-6. `logxy` -- plots abs(*Y*) vs abs(X**) with log-log scale
+6. `logxy` -- plots abs(*Y*) vs abs(*X*) with log-log scale
 
 *We will soon add a more general option, that will transform the X or Y values according to the user defined arithmetic expression.*
 
-**pyplot** plots these data files in a *2xN* grid, and labels the *x* axis as *X* and all the *Y* columns as *Y0*, *Y1*, *Y2*, etc as a plot legend. Also, each plot is titled as *datafile1*, *datafile2*, etc, in the order of their appearance in the command-ine.
+**pyplot** plots these data files in a *2XN* grid, and labels the *x* axis as *X* and all the *Y* columns as *Y0*, *Y1*, *Y2*, etc as a plot legend. Also, each plot is titled as *datafile1*, *datafile2*, etc, in the order of their appearance in the command-ine.
 
-The plot appears as a *pdf* file, opened using *evince*. After the window is closed, the plot *pdf* file is deleted. 
+The plot appears as a *pdf* file, opened using *evince*. After the plot window is closed, the plot *pdf* file is automatically deleted. 
