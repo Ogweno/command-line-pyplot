@@ -18,7 +18,7 @@ where, file1 and file2 are the data files. We can have any number of data files,
    3.0   1.6   4.2   4.4
 ```
 
-This file has 4 columns, one X and 3 Y columns. **pyplot** plots Y0,Y1,Y2 vs X as a line plot. In this case, all the files should have 4 columns. Thus, option *M=4* (see below).
+This file has 4 columns, one X and 3 Y columns. The file can have comments, where the comment lines must start with ```#```. **pyplot** plots Y0,Y1,Y2 vs X as a line plot. In this case, all the files should have 4 columns. Thus, option *M=4* (see below).
 
 The list of data files *must* be followed by the keyword *cols M*, where *cols* marks the end of the list of data files, and *M* is the number of columns in any data file ( it has to be *M* for all files).
 
