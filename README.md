@@ -8,6 +8,7 @@ pauls:~$ pyplot file1 file2 cols M option1 option2
 
 where, file1 and file2 are the data files. We can have any number of data files, provided all the files have same number of columns. A typical data file should have the following format:
 
+```
 # comment 1
 # comment 2
 # comment 3
@@ -15,6 +16,7 @@ where, file1 and file2 are the data files. We can have any number of data files,
    1.0   1.2   3.2   4.3
    2.0   1.8   2.3   5.4
    3.0   1.6   4.2   4.4
+```
 
 This file has 4 columns, one X and 3 Y columns. **pyplot** plots Y0,Y1,Y2 vs X as a line plot. In this case, all the files should have 4 columns. Thus, option *M=4* (see below).
 
