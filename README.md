@@ -1,2 +1,2 @@
-# command-line-pyplot
-Command line plotting tool for data files, using python.
+## Command-line plotting tool
+*pyplot* is a command-line plotting tool written in python. It uses matplotlib and pandas to create line plots from data files.
