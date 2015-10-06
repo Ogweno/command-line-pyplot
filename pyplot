@@ -114,6 +114,7 @@ def dfplot(dframes,
         ax = dframes[i].plot(x=dframes[i].columns.values[0],
                              logy=logy,
                              logx=logx,
+                             loglog=loglog,
                              color=colors,
                              legend=legend,
                              ax=ax)      
