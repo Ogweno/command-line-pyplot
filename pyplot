@@ -151,9 +151,9 @@ The command line arguments should be of the form
 3> plot option or options (if any) in ANY order, which are
 3a> absy, plots abs(Y) vs X
 3b> absx, plots Y vs abs(X)
-3b> logy, plots log( abs(Y) ) vs X
-3c> logx, plots Y vs log( abs(x) )
-3d> logxy, plots log( abs(Y) ) vs log( abs(X) )
+3b> logy, plots logscale abs(Y) vs X
+3c> logx, plots Y vs logscale abs(x) 
+3d> logxy, plots log-log scale abs(Y) vs abs(X) 
 """
 
 plot_options = ['absy','absx','absxy','logy','logx','logxy']
