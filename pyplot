@@ -7,10 +7,6 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
-from matplotlib.ticker import MultipleLocator
-from matplotlib.ticker import LogLocator
-from mpl_toolkits.mplot3d import Axes3D
 # ------------------- xxx -------------------- LIBRARIES
 
 
@@ -96,7 +92,7 @@ def dfplot(dframes,
            figsize=[13,4],
            nrows=1,ncols=1,
            legend=True,
-           logx=False,logy=False,
+           logx=False,logy=False,loglog=False,
            xlabel='',ylabel='',
            titles=[''],
            save=True,
@@ -285,7 +281,7 @@ elif 'logxy' in sys.argv:
            nrows=nrows,
            ncols=ncols,
            figsize=[7.5*ncols,5*nrows],
-           logx=True,logy=True,
+           loglog=True,
            save=True,
            titles=titles,
            filename='tmp_pyplot.pdf')
