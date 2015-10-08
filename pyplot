@@ -149,16 +149,44 @@ The command line arguments should be of the form
 2> cols n
    where, n (integer) is the total column number
    in each data file
-3> plot option or options (if any) in ANY order, which are
-3a> absy, plots abs(Y) vs X
-3b> absx, plots Y vs abs(X)
-3b> logy, plots logscale abs(Y) vs X
-3c> logx, plots Y vs logscale abs(x) 
-3d> logxy, plots log-log scale abs(Y) vs abs(X) 
+3> plot options or options (if any) in ANY order
+  (I) Basic options provided as default:
+    Ia> absy, plots abs(Y) vs X
+    Ib> absx, plots Y vs abs(X)
+    Ib> logy, plots logscale abs(Y) vs X
+    Ic> logx, plots Y vs logscale abs(x) 
+    Id> logxy, plots log-log scale abs(Y) vs abs(X)
+  (II) user defined options on command prompt:
+    IIa> options ending with xy|y|x
+      of the form a+b*fy, where f is a numpy function
+      examples: cosy, 2.0*sinxy, 3.0+2cosx, etc
+      fxy => X -> f(X) and Y -> f(Y), etc
+    IIb> options beginning with xy|y|x
+      of the form y[+-*]a
+      examples: xy+2, y**2, x*3, y-2.0, etc
+      in this case, we do not have any numpy function
 """
 
-plot_options = ['absy','absx','absxy','logy','logx','logxy']
-plot_options.append(r"[a-z]*xy|y|x", r"[0-9]*[+-*]xy|y|x")
+# --     --       --      --       --      --        --      --
+# basic plot options
+# these are the options that
+# are provide by default
+plot_options_basic = ['absy','absx','absxy','logy','logx','logxy']
+
+# we now provide some user defined options
+# regex patterns like y, cosy, 2*cosxy, etc
+# i.e., ending with xy|x|y
+# in this case, the user should use
+# functions that exist in numpy
+pat_flt = r'[-+]?[0-9]*\.?[0-9]+'   # float regex
+opt_IIa_1 = re.compile(r'([-+]?[0-9]*\.?[0-9]+[-+]?[0-9]*\.?[0-9]+\*)*\w+xy')
+opt_IIa_2 = re.compile(r'([-+]?[0-9]*\.?[0-9]+[-+]?[0-9]*\.?[0-9]+\*)*\w+y')
+opt_IIa_3 = re.compile(r'([-+]?[0-9]*\.?[0-9]+[-+]?[0-9]*\.?[0-9]+\*)*\w+x')
+#options_pattern1 = re.compile(r'(\d\*)*\w+xy$|(\d\*)*\w+y$|(\d\*)*\w+x$')
+
+# patterns like y*2, y+2, 2*etc
+#options_pattern2 = re.compile(r'\d+\+?\-?\*?xy|\d+\+?\-?\*?y|\d+\+?\-?\*?y')
+# --     --       --      --       --      --        --      --
 
 # --     --       --      --       --      --        --      --
 # finding out the number of columns in each
@@ -185,6 +213,33 @@ col = ['X']
 for i in xrange(1,ncols):
     label = 'Y'+str(i-1)
     col.append(label)
+
+# getting the other plot options
+# based on the regex patterns
+given_options = sys.argv[end+2:]
+plot_options_extra = []
+match = []
+for e in given_options:
+    print e
+    m = re.search(opt_IIa_1,e)
+#    m = m.group()
+    match.append( m )
+#    match2 = re.search(opt_IIa_2,e)
+#    match3 = re.search(opt_IIa_3,e)
+    if match:
+        for e in match:
+            if e not in plot_options_basic:
+                plot_options_extra.append(e)
+print plot_options_extra
+
+if plot_options_extra:
+    for e in plot_options_extra:
+        len_e = len(e)
+        if e.endswith('xy'):
+            expr1 = e[0:len_e-2]
+        else:
+            expr1 = e[0:len_e-1]
+    print expr1
 # --     --       --      --       --      --       --     --       
 
 # --     --       --      --       --      --       --     --
@@ -200,7 +255,7 @@ for i in xrange( 1,end ):
         df = readcsv( sys.argv[i],col )
     except IOError:
         # file does not exist
-        if sys.argv[i] not in plot_options:
+        if sys.argv[i] not in plot_options_basic:
             s = 'file ' + str( sys.argv[i] ) + ' does not exist'
             print s
             sys.exit()
