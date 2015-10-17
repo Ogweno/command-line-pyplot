@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# -------------- IMPORT LIBRARIES ------------------------
+# -------------- (I) IMPORT LIBRARIES ------------------------
 from math import *
 import sys
 import os
@@ -8,10 +8,10 @@ import re
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-# ------------------- xxx -------------------- LIBRARIES
+# ------------------- xxx -------------------- (I) LIBRARIES
 
 
-# --------------------- FIGURE SETTINGS -------------------
+# ---------------------(II) FIGURE SETTINGS -------------------
 """
 Some of the setting for the plots. These are the
 default settings for all figure.
@@ -33,10 +33,10 @@ plt.rc('ytick.minor', size=3.0, width=1.5)
 
 # line colors, blue, black, red, magenta, green
 colors = ['b','k','r','m','g','c']
-# --------------------------- xxx --------------- FIGURE SETTINGS
+# --------------------------- xxx --------------- (II) FIGURE SETTINGS
 
 
-# ------------------- READ FUNCTION FOR DATA FILE  --------------
+# ------------------- (III) READ FUNCTION FOR DATA FILE  --------------
 """
 It takes as input the
 1> datafile name 
@@ -74,10 +74,10 @@ def readcsv(filename,col=[]):
     f = f.fillna(method='bfill') 
     f.index = range(f.shape[0])
     return f
-# ----------------------- xxx --------------- READ DATA FUNCTION
+# ----------------------- xxx --------------- (III) READ DATA FUNCTION
 
 
-# -------------------- FUNCTION FOR DATAFRAME PLOTTING ----------------
+# ------------------- (IV) FUNCTION FOR DATAFRAME PLOTTING ----------------
 """
 The function takes as input 
 a list whose elements are dataframes.
@@ -135,10 +135,10 @@ def dfplot(dframes,
             fig.savefig(filename)
         else:
             fig.savefig('fig.pdf')
-# -------------------- xxx -------------- PLOTTING DATAFRAME FUNCTION
+# -------------------- xxx ------------ (IV) PLOTTING DATAFRAME FUNCTION
 
 
-# ------------------- PARSING COMMAND PROMPTS ------------
+# ------------------- (V) PARSING COMMAND PROMPTS ------------
 """
 The command line arguments should be of the form
 ( and must appear in the order specified )
@@ -157,38 +157,45 @@ The command line arguments should be of the form
     Ic> logx, plots Y vs logscale abs(x) 
     Id> logxy, plots log-log scale abs(Y) vs abs(X)
   (II) user defined options on command prompt:
-    IIa> options ending with xy|y|x
-      of the form a+b*fy, where f is a numpy function
-      examples: cosy, 2.0*sinxy, 3.0+2cosx, etc
-      fxy => X -> f(X) and Y -> f(Y), etc
-    IIb> options beginning with xy|y|x
-      of the form y[+-*]a
-      examples: xy+2, y**2, x*3, y-2.0, etc
-      in this case, we do not have any numpy function
+    currently these options are limited to
+    simple arithmetic operations of the form:
+    a + b*r**c,
+    where r is either x|y|xy
+    and a,b,c are floats, both +ve and -ve.
+    The entered expression has to conform to the
+    above form, but need not provide the full expr,
+    i.e., 3.0+y is a valid expression.
 """
 
-# --     --       --      --       --      --        --      --
+# below are code sub-sections for parsing the command-line
+
+#                       V(a) plot options and regex
 # basic plot options
 # these are the options that
 # are provide by default
 plot_options_basic = ['absy','absx','absxy','logy','logx','logxy']
 
-# we now provide some user defined options
-# regex patterns like y, cosy, 2*cosxy, etc
-# i.e., ending with xy|x|y
-# in this case, the user should use
-# functions that exist in numpy
-pat_flt = r'[-+]?[0-9]*\.?[0-9]+'   # float regex
-opt_IIa_1 = re.compile(r'([-+]?[0-9]*\.?[0-9]+[-+]?[0-9]*\.?[0-9]+\*)*\w+xy')
-opt_IIa_2 = re.compile(r'([-+]?[0-9]*\.?[0-9]+[-+]?[0-9]*\.?[0-9]+\*)*\w+y')
-opt_IIa_3 = re.compile(r'([-+]?[0-9]*\.?[0-9]+[-+]?[0-9]*\.?[0-9]+\*)*\w+x')
-#options_pattern1 = re.compile(r'(\d\*)*\w+xy$|(\d\*)*\w+y$|(\d\*)*\w+x$')
+# we now provide the framework for
+# some user definable options
+# regex patterns of the form a + b*r**c or a + b*r*c
+# where a,b,c are +/-floats, and if zero, need not be entered
+# and r=> xy|x|y
+# we need to parse all the individual elements
+# such as a,b,+-*,r,c
+# so we use parenthesis '()' to create appropriate groups
+# that will be easily identified in re.match.groups()
+# float regex: r'[-+]?[0-9]*\.?[0-9]+'
+expr_pattern = re.compile(r'([-+]?)([0-9]*\.?[0-9]*)'
+                          r'([-+*]?)([0-9]*\.?[0-9]*)'
+                          r'\*?'
+                          r'([x-y]+)'
+                          r'([*^]{0,2})'
+                          r'[(]?'
+                          r'([-+]?)([0-9]*\.?[0-9]*)'
+                          r'[)]?')
 
-# patterns like y*2, y+2, 2*etc
-#options_pattern2 = re.compile(r'\d+\+?\-?\*?xy|\d+\+?\-?\*?y|\d+\+?\-?\*?y')
-# --     --       --      --       --      --        --      --
 
-# --     --       --      --       --      --        --      --
+#              V(b) No. of datafiles and No. of columns
 # finding out the number of columns in each
 # data files from the cols argument
 if 'cols' not in sys.argv:
@@ -214,38 +221,95 @@ for i in xrange(1,ncols):
     label = 'Y'+str(i-1)
     col.append(label)
 
-# getting the other plot options
-# based on the regex patterns
-given_options = sys.argv[end+2:]
-plot_options_extra = []
-match = []
-for e in given_options:
-    print e
-    m = re.search(opt_IIa_1,e)
-#    m = m.group()
-    match.append( m )
-#    match2 = re.search(opt_IIa_2,e)
-#    match3 = re.search(opt_IIa_3,e)
-    if match:
-        for e in match:
-            if e not in plot_options_basic:
-                plot_options_extra.append(e)
-print plot_options_extra
+    
+#             V(c) given (basic and user-defined) plot options
+# getting all of the plot options
+# while maintaining the SAME ORDER AS ENTERED by the user
+# both the basic options and user defined ones
+plot_options_given = sys.argv[end+2:]
 
-if plot_options_extra:
-    for e in plot_options_extra:
-        len_e = len(e)
-        if e.endswith('xy'):
-            expr1 = e[0:len_e-2]
+# the entered user defined options may not conform
+# to the allowed expression patterns or basic options
+# so, we parse the user defined option(s),
+# check the conformity, and then store
+# the associated parsed info replacing the givn expression
+for i,e in list( enumerate(plot_options_given) ):
+    if e not in plot_options_basic:
+        m = expr_pattern.match(e)
+        if m:
+            # we replace the user defined options
+            # that are beyond the default options
+            # with parsed expressions using regex.groups
+            plot_options_given[i] = m.groups()
         else:
-            expr1 = e[0:len_e-1]
-    print expr1
-# --     --       --      --       --      --       --     --       
+            s1 = 'un-supported user defined option: ' + str(e)
+            s2 = 'allowed options are of the form: a+b*r**c, a+b*r*c'
+            s3 = 'r => xy|x|y and a,b,c are +/-floats'
+            s4 = 'if any of a,b,c = 0.0, they need not be mentioned'
+            s5 = 'resulting plot with only default options (if any)'
+            print '\n'+s1+'\n'+s2+'\n'+s3+'\n'+s4+'\n'+s5+'\n'
+            # we remove this 'wrong' user-defined option
+            plot_options_given.remove(e)
 
-# --     --       --      --       --      --       --     --
+# creating a function that will take
+# 1> a user defined plot option
+# 2> two dataframes, dfX and dfY
+# dfX => X column, and dfY => Y columns
+# and return the transformed dataframes
+# after applying the plot options
+def sign(str):
+    # function to determine positive or negative
+    if str == '+' or str == '':
+        c = 1.0
+    else:
+        c = -1.0
+    return c
+    
+def df_transform(dfX,dfY,ops):
+    # function to transform dataframes
+    # ops is one of the plot option
+    if ops[7]:
+        c = sign( ops[6] )*float( ops[7] )
+    else:
+        c = 1
+    if ops[1] and ops[3]:
+        a = sign( ops[0] )*float( ops[1] )
+        b = sign( ops[2] )*float( ops[3] )
+    if not ops[3]:
+        if ops[2] != '*':
+            a = sign( ops[0] )*float( ops[1] )
+            b = sign( ops[2] )*1.0
+        else:
+            a = 0.0
+            b = sign( ops[0] )*float( ops[1] )
+    if ops[5] == '**' or ops[5] == '^':
+        if 'y' in ops:
+            dfY = a + b*dfY**c
+        elif 'x' in ops:
+            dfX = a + b*dfX**c
+        else:
+            dfY = a + b*dfY**c
+            dfX = a + b*dfX**c
+    else: # ops[5] = '*'
+        if 'y' in ops:
+            dfY = a + b*dfY*c
+        elif 'x' in ops:
+            dfX = a + b*dfX*c
+        else:
+            dfY = a + b*dfY*c
+            dfX = a + b*dfX*c
+    return dfX, dfY
+
+    
+#                  V(d) creating dataframes from data files 
 # reading in the data files
-# NOTE: all datafiles are entered before 'cols'
+# ( NOTE: all datafiles are entered before 'cols' )
 # and creating a list of dataframes
+# AFTER applying the given plot options to the data
+# both basic and user defined plot options are implemented
+# serially, i.e., in the same order as they appear
+# in the command line
+# ( only 'log-scale' options will be implemented later )
 dframes = []
 titles = []
 for i in xrange( 1,end ):
@@ -272,30 +336,44 @@ for i in xrange( 1,end ):
         print s1+s2
         sys.exit()
     titles.append( 'datafile '+str(i) )
-    if 'absy' in sys.argv \
-       or 'logy' in sys.argv:
+    if plot_options_given:
+        # split the dataframe into X and Y's
         dfX = df.X
         dfY = df.ix[:,1:]
-        dfY = dfY.abs()
+        for e in plot_options_given:
+            # take care of basic options
+            # except the log-scaling
+            if e == 'absy':
+                dfY = dfY.abs()
+            elif e == 'absx':
+                dfX = dfX.abs()
+            elif e == 'absxy':
+                dfY = dfY.abs()
+                dfX = dfX.abs()
+            # take care of user-defined options
+            elif e not in plot_options_basic[3:]:
+                dfX, dfY = df_transform(dfX,dfY,e)
+        # take care of the log-scaling
+        # we take the absolute value
+        # after having taken care of all
+        # other plot options
+        if 'logy' in plot_options_given:
+            dfY = dfY.abs()
+        elif 'logx' in plot_options_given:
+            dfX = dfX.abs()
+        elif 'logxy' in plot_options_given:
+            dfY = dfY.abs()
+            dfX = dfX.abs()
+        # collecting dfX and dfY to get back df
         dfY.insert(0,'X',dfX)
         df = dfY
         dframes.append( df )
-    elif 'absx' in sys.argv \
-         or 'logx' in sys.argv:
-        dfX = df.X
-        dfX = dfX.abs()
-        dfY = df.ix[:,1:]
-        dfY.insert(0,'X',dfX)
-        df = dfY
-        dframes.append( df )
-    elif 'absxy' in sys.argv \
-         or 'logxy' in sys.argv:
-        dframes.append( df.abs() )
     else:
+        # no plot options
         dframes.append( df )
-# --     --       --      --       --      --       --     --
+    
 
-# --     --       --      --       --      --       --     --
+#                    V(e) creating 2XN grid for plots 
 # no. of plots or data files
 nplots = end - 1
 
@@ -312,7 +390,7 @@ elif nplots%2==1:
     else:
         nrows = nplots/2+1
         ncols = 2
-# ----------------------- xxx ---------------- COMMAND PROMPTS
+# ----------------------- xxx ---------------- (V) COMMAND PROMPTS
 
 
 # -------------------- PLOT OF DATAFILES ------------------
