@@ -43,10 +43,8 @@ Options that are provided by the user to perform certain arithmetic operations o
 * `a+b*r**c` or `a+b*r^c`
 * `a+b*r*c`
 * `a+b*r+c`
-where, a,b,c are `$\pm$` floats
-
-*We will soon add a more general option, that will transform the X or Y values according to the user defined arithmetic expression.*
+where, `a,b,c` are `+/-`floats, and `r= x,y,xy`. If any of `a,b,c = 0`, we can drop these terms from the expression. For example, shortened expressions like `x+30.0`, `2*y`, etc. are valid expressions. No white-space is allowed inside expressions. We can have any number of user-defined expressions, and they will be implemented from left to right. So, `y+30 absy` is not similar to `absy y+30`!
 
 **pyplot** plots these data files in a *2XN* grid, and labels the *x* axis as *X* and all the *Y* columns as *Y0*, *Y1*, *Y2*, etc as a plot legend. Also, each plot is titled as *datafile1*, *datafile2*, etc, in the order of their appearance in the command-ine.
 
-The plot appears as a *pdf* file, opened using *evince*. After the plot window is closed, the plot *pdf* file is automatically deleted. 
+The plot appears as a *pdf* file, and is automatically opened using *evince*. After the plot window is closed, the plotted *pdf* file is automatically deleted! 
