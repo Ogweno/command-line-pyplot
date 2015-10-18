@@ -4,6 +4,7 @@
 from math import *
 import sys
 import os
+import subprocess
 import re
 import pandas as pd
 import numpy as np
@@ -177,7 +178,10 @@ plot_options_basic = ['absy','absx','absxy','logy','logx','logxy']
 
 # we now provide the framework for
 # some user definable options
-# regex patterns of the form a + b*r**c or a + b*r*c
+# regex patterns of the form
+# 1> a + b*r**c
+# 2> a + b*r*c
+# 3> a + b*r + c
 # where a,b,c are +/-floats, and if zero, need not be entered
 # and r=> xy|x|y
 # we need to parse all the individual elements
@@ -243,14 +247,21 @@ for i,e in list( enumerate(plot_options_given) ):
             plot_options_given[i] = m.groups()
         else:
             s1 = 'un-supported user defined option: ' + str(e)
-            s2 = 'allowed options are of the form: a+b*r**c, a+b*r*c'
-            s3 = 'r => xy|x|y and a,b,c are +/-floats'
-            s4 = 'if any of a,b,c = 0.0, they need not be mentioned'
-            s5 = 'resulting plot with only default options (if any)'
-            print '\n'+s1+'\n'+s2+'\n'+s3+'\n'+s4+'\n'+s5+'\n'
-            # we remove this 'wrong' user-defined option
-            plot_options_given.remove(e)
+            s2 = 'allowed options are of the form:'
+            s3 = '1> a+b*r**c or a+b*r^c, 2> a+b*r*c, 3> a+b*r+c'
+            s4 = 'r => xy|x|y and a,b,c are +/-floats'
+            s5 = 'if any of a,b,c = 0.0, they need not be mentioned'
+            s6 = 'resulting plot with other options (if any)'
+            print '\n'+s1+'\n'+s2+'\n'+s3+'\n'+s4+'\n'+s5+'\n'+s6+'\n'
+            # we flag this 'wrong' user-defined option
+            # and will remove it later
+            plot_options_given[i] = 'del'
 
+# remove the 'wrong' plot options which has been flagged           
+for e in plot_options_given:
+    if e == 'del':
+        plot_options_given.remove(e)
+        
 # creating a function that will take
 # 1> a user defined plot option
 # 2> two dataframes, dfX and dfY
@@ -292,6 +303,14 @@ def df_transform(dfX,dfY,ops):
         else:
             dfY = a + b*dfY**c
             dfX = a + b*dfX**c
+    elif not ops[5] and ops[6]:
+        if 'y' in ops:
+            dfY = a + b*dfY + c
+        elif 'x' in ops:
+            dfX = a + b*dfX + c
+        else:
+            dfY = a + b*dfY + c
+            dfX = a + b*dfX + c
     else: # ops[5] = '*'
         if 'y' in ops:
             dfY = a + b*dfY*c
@@ -396,6 +415,10 @@ elif nplots%2==1:
 
 
 # -------------------- PLOT OF DATAFILES ------------------
+# creating a 'hopefully' unique file-name
+# by appending the pid to the name
+filename = 'tmppyplot' + str( os.getpid() ) + '.pdf'
+
 if 'logy' in sys.argv:
     dfplot(dframes,
            nrows=nrows,
@@ -404,7 +427,7 @@ if 'logy' in sys.argv:
            logy=True,
            save=True,
            titles=titles,
-           filename='tmp_pyplot.pdf')
+           filename=filename) 
 elif 'logx' in sys.argv:
     dfplot(dframes,
            nrows=nrows,
@@ -413,7 +436,7 @@ elif 'logx' in sys.argv:
            logx=True,
            save=True,
            titles=titles,
-           filename='tmp_pyplot.pdf')
+           filename=filename)
 elif 'logxy' in sys.argv:
     dfplot(dframes,
            nrows=nrows,
@@ -422,7 +445,7 @@ elif 'logxy' in sys.argv:
            loglog=True,
            save=True,
            titles=titles,
-           filename='tmp_pyplot.pdf')
+           filename=filename)
 else:
     dfplot(dframes,
            nrows=nrows,
@@ -430,7 +453,7 @@ else:
            figsize=[7.5*ncols,5*nrows],
            save=True,
            titles=titles,
-           filename='tmp_pyplot.pdf')
+           filename=filename)
 # ------------------- xxx ----------------- PLOTS
 
 
@@ -439,6 +462,7 @@ else:
 # it deletes the created .pdf plot files after viewing
 # i.e., after the plot window is closed
 
-os.system( 'evince tmp_pyplot.pdf' )
-os.system( 'rm tmp_pyplot.pdf' )
+readpdf = subprocess.Popen(['evince', filename], shell=False)
+readpdf.wait()      # wait till evince window is closed
+subprocess.Popen(['rm', filename], shell=False )
 # --------------- xxx -------- VIEWS
