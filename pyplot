@@ -250,7 +250,7 @@ for i,e in list( enumerate(plot_options_given) ):
             print '\n'+s1+'\n'+s2+'\n'+s3+'\n'+s4+'\n'+s5+'\n'
             # we remove this 'wrong' user-defined option
             plot_options_given.remove(e)
-print plot_options_given
+
 # creating a function that will take
 # 1> a user defined plot option
 # 2> two dataframes, dfX and dfY
