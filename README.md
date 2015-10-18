@@ -26,7 +26,7 @@ The list of data files *must* be followed by the keyword `cols M`, where `cols` 
 
 There can be several plot options, and they are implemented from left to right, i.e., in the order of their appearance in the command-line. They are broadly of two types.
 
-#### Type 1
+###### *Type 1*
 
 Options that are inbuilt or provided by the program, that can be used in the command-line in any order, and they are:
 
@@ -37,13 +37,13 @@ Options that are inbuilt or provided by the program, that can be used in the com
 5. `logx`  -- plots *Y* vs abs(*X*) with log-scale for *X*
 6. `logxy` -- plots abs(*Y*) vs abs(*X*) with log-log scale
 
-#### Type 2
+###### *Type 2*
 
 Options that are provided by the user to perform certain arithmetic operations on the data before plotting. These user-defined options should conform to the following form:
-* a+b*r**c or a+b*r^c
-* a+b*r*c
-* a+b*r+c
-where, a,b,c are $\pm$ floats
+* `a+b*r**c` or `a+b*r^c`
+* `a+b*r*c`
+* `a+b*r+c`
+where, a,b,c are `$\pm$` floats
 
 *We will soon add a more general option, that will transform the X or Y values according to the user defined arithmetic expression.*
 
