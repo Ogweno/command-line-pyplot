@@ -275,13 +275,15 @@ def df_transform(dfX,dfY,ops):
     if ops[1] and ops[3]:
         a = sign( ops[0] )*float( ops[1] )
         b = sign( ops[2] )*float( ops[3] )
-    if not ops[3]:
+    if not ops[3] and ops[1]:
         if ops[2] == '+' or ops[2] == '-':
             a = sign( ops[0] )*float( ops[1] )
             b = sign( ops[2] )*1.0
         elif not ops[2] or ops[2] == '*':
             a = 0.0
             b = sign( ops[0] )*float( ops[1] )
+    if not ops[1] and not ops[3]:
+        a, b = 0.0, 1.0
     if ops[5] == '**' or ops[5] == '^':
         if 'y' in ops:
             dfY = a + b*dfY**c
