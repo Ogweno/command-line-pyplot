@@ -30,12 +30,14 @@ There can be several plot options, and they are implemented from left to right, 
 
 Options that are inbuilt or provided by the program, that can be used in the command-line in any order, and they are:
 
-1. `absy`  -- plots abs(*Y*) vs *X*
-2. `absx`  -- plots *Y* vs abs(*X*)
-3. `absxy` -- plots abs(*Y*) vs abs(*X*)
-4. `logy`  -- plots abs(*Y*) vs *X* with log-scale for *Y*
-5. `logx`  -- plots *Y* vs abs(*X*) with log-scale for *X*
-6. `logxy` -- plots abs(*Y*) vs abs(*X*) with log-log scale
+* `absy`  -- plots abs(*Y*) vs *X*
+* `absx`  -- plots *Y* vs abs(*X*)
+* `absxy` -- plots abs(*Y*) vs abs(*X*)
+* `logy`  -- plots abs(*Y*) vs *X* with log-scale for *Y*
+* `logx`  -- plots *Y* vs abs(*X*) with log-scale for *X*
+* `logxy` -- plots abs(*Y*) vs abs(*X*) with log-log scale.
+
+The option for log-scaling is slightly different, in that it takes the abs(*Y*) or abs(*X*) after all other plot options have been implemented.
 
 ###### *Type 2*
 
