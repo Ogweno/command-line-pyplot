@@ -331,6 +331,12 @@ def df_transform(dfX,dfY,ops):
 # serially, i.e., in the same order as they appear
 # in the command line
 # ( only 'log-scale' options will be implemented later )
+
+# regex for file name
+# we only pick the file name if it has en extension
+# in the absence of which, we name it as datafile 1, etc
+expr_filename = re.compile(r'\w+[-_]?\w+[.]\w+')
+
 dframes = []
 titles = []
 for i in xrange( 1,end ):
@@ -356,7 +362,12 @@ for i in xrange( 1,end ):
         s2 = ' or check their compatibility'
         print s1+s2
         sys.exit()
-    titles.append( 'datafile '+str(i) )
+    # creating plot name from the datafile name
+    m = expr_filename.search(sys.argv[i])
+    if m:
+        titles.append( m.group() )
+    else:
+        titles.append( 'datafile '+str(i) )
     if plot_options_given:
         # split the dataframe into X and Y's
         dfX = df.X
