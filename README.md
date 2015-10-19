@@ -8,7 +8,7 @@ A typical instance of the command will look like this,
 pauls:~$ pyplot file1 file2 cols M option1 option2 option3
 ```
 
-where, `file1` and `file2` are the data files. We can have any number of data files, provided all the files have same number of columns. A typical data file should have the following format:
+where, `file1` and `file2` are the data files. We can have any number of data files, provided all the files have same number of columns. Also, use of wildcards in datafile names is permitted. A typical data file should have the following format:
 
 ```
 # comment 1
@@ -48,6 +48,7 @@ Options that are provided by the user to perform certain arithmetic operations o
 
 where, `a,b,c` are `+/-`floats, and `r = x,y,xy`. If any of `a,b,c = 0`, we can drop these terms from the expression. For example, shortened expressions like `x+30.0`, `2*y`, etc. are valid expressions. No white-space is allowed inside expressions. We can have any number of user-defined expressions, and they will be implemented from left to right. So, `y+30 absy` is not similar to `absy y+30`!
 
-**pyplot** plots these data files in a *2XN* grid, and labels the *x* axis as *X* and all the *Y* columns as *Y0*, *Y1*, *Y2*, etc as a plot legend. Also, each plot is titled as *datafile 1*, *datafile 2*, etc, in the order of their appearance in the command-ine.
+**pyplot** plots these data files in a *2XN* grid, and labels the *x* axis as *X* and all the *Y* columns as *Y0*, *Y1*, *Y2*, etc as a plot legend. Also, each plot is titled according to the name of the datafile, provided the file-name has an extension, i.e., names like `/PATHTO/datafile_123-check.dat`. In this instance, the plot title will be `datafile_123-check.dat`. In case the file-name does not conform to this standard, the plots are titled 
+as *datafile 1*, *datafile 2*, etc, in the order of their appearance in the command-ine.
 
 The plot appears as a *pdf* file, and is automatically opened using *evince*. After the plot window is closed, the plotted *pdf* file is automatically deleted! 
