@@ -9,6 +9,8 @@ import re
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import MySQLdb as mdb
+import getpass
 # ------------------- xxx -------------------- (I) LIBRARIES
 
 
@@ -20,31 +22,41 @@ The plot is automatically opened using evince, and after
 the evince-window is closed, the plotted file is deleted.
 It is primarily meant to view data on the fly!
 
-The command line arguments should be of the form
-( and must appear in the order specified )
-1> datafiles (1 or many)
-   Each datafile must have the same number of columns
-   comment lines in data files must begin with '#'
-   ( NOT comma separated data files! )
-2> cols n
-   where, n (integer) is the total column number
-   in each data file
-3> plot options or options (if any) in ANY order
-  (I) Basic options provided as default:
-    Ia> absy, plots abs(Y) vs X
-    Ib> absx, plots Y vs abs(X)
-    Ib> logy, plots logscale abs(Y) vs X
-    Ic> logx, plots Y vs logscale abs(x) 
-    Id> logxy, plots log-log scale abs(Y) vs abs(X)
-  (II) user defined options on command prompt:
-    currently these options are limited to
-    simple arithmetic operations of the form:
-    a + b*r**c,
-    where r is either x|y|xy
-    and a,b,c are floats, both +ve and -ve.
-    The entered expression has to conform to the
-    above form, but need not provide the full expr,
-    i.e., 3.0+y is a valid expression.
+case Datafile:
+   The command line arguments should be of the form
+   ( and must appear in the order specified )
+   1> datafiles (1 or many)
+      Each datafile must have the same number of columns
+      comment lines in data files must begin with '#'
+      ( NOT comma separated data files! )
+   2> keyword "cols" n
+      where, n (integer) is the total column number
+      in each data file
+   3> plot options or options (if any) in ANY order
+      (I) Basic options provided as default:
+       Ia> absy, plots abs(Y) vs X
+       Ib> absx, plots Y vs abs(X)
+       Ib> logy, plots logscale abs(Y) vs X
+       Ic> logx, plots Y vs logscale abs(x) 
+       Id> logxy, plots log-log scale abs(Y) vs abs(X)
+     (II) user defined options on command prompt:
+       currently these options are limited to
+       simple arithmetic operations of the form:
+       a + b*r**c,
+       where r is either x|y|xy
+       and a,b,c are floats, both +ve and -ve.
+       The entered expression has to conform to the
+       above form, but need not provide the full expr,
+       i.e., 3.0+y is a valid expression.
+
+case Database(DB) :
+   The command line arguments should be of the form
+   ( and must appear in the order specified )
+   1> keyword "db"
+   2> database info in the same order: host, user, database, table(s)
+   3> keyword "use" to mark end of table names
+   4> plot options as in the datafile case
+   5> after pressing ENTER, there will be a password prompt for the DB.
 """
 # -------------------- xxx ----------- (II) preliminary documentation
 
@@ -80,8 +92,9 @@ class BaseParse:
     A base class that would parse command-line plot options.
     
     i.e., parse command-line arguments that would appear both for
-    the database and datafile cases, and also create some generic
-    functions that would work for both cases.
+    the database and datafile cases, and also create some GENERIC
+    FUNCTIONS (independent of command-line arguments) that would
+    work for both cases.
 
     There is no __init__ in this BaseParse class.
     The two subclasses, a> Datafile, b>Database,
@@ -207,25 +220,10 @@ class BaseParse:
             dfY = dfY_tmp
             dfX = dfX_tmp
         return dfX, dfY
-# --------------------- xxx ------------ (IV) base class
-
-
-# ------------------------ (V) datafile class ----------------------
-class Datafile(BaseParse):
-    """
-    Class for the case of datafiles as command-line input.
-
-    It inherits from class BaseParse, and adds new "datafile"
-    specific class methods.
-    """
-    def __init__(self,arg_list):
-        # arg_list is in general sys.argv
-        # i.e, the list of command-line arguments
-        self.arglist = arg_list
 
     def _readcsv(self,filename,col=[]):
         """
-        reads a datafile and returns a corresponding dataframe.
+        Generic function to create dataframe from a corresponding datafile.
         
         It takes as input the
         1> datafile name ( filename ) 
@@ -242,7 +240,7 @@ class Datafile(BaseParse):
         The data file can have comments where the comment lines has to
         start with the character "#".
         
-        We later asign default column names X, Y0, Y1, Y2, etc to all columns.
+        We later assign default column names X, Y0, Y1, Y2, etc to all columns.
         """
         # drop comment lines
         # backfill NAN values
@@ -256,6 +254,92 @@ class Datafile(BaseParse):
         f = f.fillna(method='bfill') 
         f.index = range(f.shape[0])
         return f
+
+    def _readsql(self,table,con):
+        """
+        Generic function to create dataframe from TABLE from a DataBase.
+        
+        It takes as input the
+        1> table name ( table ) 
+        2> DB conection info ( con ),
+        and outputs a dataframe.
+        
+        The data in the input table has to be of the form X, Y0, Y1, Y2, etc.,
+        where we are interested in plotting Y's vs X as a line plot.
+        All X and Y's must be numeric.
+        """
+        df = pd.read_sql('SELECT * FROM %s'%table,con)
+        return df
+
+    def _dfPlot(self,
+                dframes,
+                figsize=[13,4],
+                nrows=1,ncols=1,
+                legend=True,
+                logx=False,logy=False,loglog=False,
+                xlabel='',ylabel='',
+                titles=[''],
+                save=True,
+                filename=''):
+        """
+        Generic function for plotting a list of dataframes.
+
+        Input: A list of dataframes, containing one or several elements.
+               Each dataframe corresponds to a given datafile.
+        Output: A single pdf plot of all the dataframes in a grid-like view.
+        """
+        fig = plt.figure(figsize=figsize)
+        # max number of figures
+        # that can be included 
+        # in the grid-view
+        figs = nrows*ncols
+        
+        # number of dataframes
+        # we want to plot
+        plts = len( dframes )
+    
+        for i in xrange(plts):
+            ax = fig.add_subplot(nrows,ncols,i+1)
+            if i>=len(titles):
+                titles.append('')               
+            ax = dframes[i].plot(x=dframes[i].columns.values[0],
+                             logy=logy,
+                             logx=logx,
+                             loglog=loglog,
+                             color=colors,
+                             legend=legend,
+                             ax=ax)      
+            ax.legend(loc='best', fancybox=True, framealpha=0.5)
+        
+        # some text
+        if xlabel:
+            ax.set_xlabel(xlabel, fontsize=22)
+        ax.set_ylabel(ylabel, fontsize=22)
+        ax.set_title(titles[i], fontsize=20, y=1.05)
+        
+        # grid display spacing
+        fig.tight_layout(w_pad=5.0, h_pad=2.0)
+        if save:
+            if filename:
+                fig.savefig(filename)
+            else:
+                fig.savefig('fig.pdf')
+# --------------------- xxx ------------ (IV) base class
+
+
+# ------------------------ (V) datafile class ----------------------
+class Datafile(BaseParse):
+    """
+    Class for the case of datafiles as command-line input.
+
+    It inherits from class BaseParse, and adds new "datafile"
+    specific class methods.
+    """
+    def __init__(self,arg_list):
+        # arg_list is in general sys.argv
+        # i.e, the list of command-line arguments
+        self.arglist = arg_list
+
 
     def _readColumns(self):
         """
@@ -377,60 +461,6 @@ class Datafile(BaseParse):
                 dframes.append( df )
         return dframes, titles
 
-    def _dfPlot(self,
-                dframes,
-                figsize=[13,4],
-                nrows=1,ncols=1,
-                legend=True,
-                logx=False,logy=False,loglog=False,
-                xlabel='',ylabel='',
-                titles=[''],
-                save=True,
-                filename=''):
-        """
-        Generic function for plotting dataframes.
-
-        Input: A list of dataframes, containing one or several elements.
-               Each dataframe corresponds to a given datafile.
-        Output: A single pdf plot of all the dataframes in a grid-like view.
-        """
-        fig = plt.figure(figsize=figsize)
-        # max number of figures
-        # that can be included 
-        # in the grid-view
-        figs = nrows*ncols
-        
-        # number of dataframes
-        # we want to plot
-        plts = len( dframes )
-    
-        for i in xrange(plts):
-            ax = fig.add_subplot(nrows,ncols,i+1)
-            if i>=len(titles):
-                titles.append('')               
-            ax = dframes[i].plot(x=dframes[i].columns.values[0],
-                             logy=logy,
-                             logx=logx,
-                             loglog=loglog,
-                             color=colors,
-                             legend=legend,
-                             ax=ax)      
-            ax.legend(loc='best', fancybox=True, framealpha=0.5)
-        
-        # some text
-        if xlabel:
-            ax.set_xlabel(xlabel, fontsize=22)
-        ax.set_ylabel(ylabel, fontsize=22)
-        ax.set_title(titles[i], fontsize=20, y=1.05)
-        
-        # grid display spacing
-        fig.tight_layout(w_pad=5.0, h_pad=2.0)
-        if save:
-            if filename:
-                fig.savefig(filename)
-            else:
-                fig.savefig('fig.pdf')
-
     def finalPlot(self):
         """
         Plots the dataframes and saves the plotted file as a pdf.
@@ -470,7 +500,7 @@ class Datafile(BaseParse):
                    titles=titles,
                    filename=filename) 
         elif 'logx' in sys.argv:
-            dfPlot(dframes,
+            self._dfPlot(dframes,
                    nrows=nrows,
                    ncols=ncols,
                    figsize=[7.5*ncols,5*nrows],
@@ -479,7 +509,7 @@ class Datafile(BaseParse):
                    titles=titles,
                    filename=filename)
         elif 'logxy' in sys.argv:
-            dfPlot(dframes,
+            self._dfPlot(dframes,
                    nrows=nrows,
                    ncols=ncols,
                    figsize=[7.5*ncols,5*nrows],
@@ -488,7 +518,7 @@ class Datafile(BaseParse):
                    titles=titles,
                    filename=filename)
         else:
-            dfPlot(dframes,
+            self._dfPlot(dframes,
                    nrows=nrows,
                    ncols=ncols,
                    figsize=[7.5*ncols,5*nrows],
@@ -496,16 +526,195 @@ class Datafile(BaseParse):
                    titles=titles,
                    filename=filename)
         return filename
-# --------------------- xxx ------------ (IV) datafile class
+# --------------------- xxx ------------ (V) datafile class
 
+
+# ------------------------ (VI) database class ----------------------
+class Database(BaseParse):
+    """
+    Class for the case of tables from a database as command-line input.
+
+    It inherits from class BaseParse, and adds new "database"
+    specific class methods.
+    """
+    def __init__(self,arg_list):
+        # arg_list is in general sys.argv
+        # i.e, the list of command-line arguments
+        self.arglist = arg_list
+
+    def _tables(self):
+        # finding out the number of tables entered by the user
+        # "use" marks the end of table names
+        if 'use' not in self.arglist:
+            print 'missing keyword use which marks end of table names'
+            sys.exit()
+        for i,e in list( enumerate(self.arglist) ):
+            if e=='use':
+                end = i
+        return end
+
+    def _dframesList(self):
+        """
+        Parsing command-line and creating dataframes from given DB TABLES.
+        
+        ( NOTE: all tables are entered before keyword 'use' ).
+        Creating a list of dataframes AFTER applying the given plot
+        options to the data, both basic and user defined plot options
+        are implemented serially, i.e., in the same order as they appear
+        in the command line.
+        ( only 'log-scale' option will be implemented at the end. )
+        """
+        end = self._tables()
+        plot_options_given = self._parsedOptions( self.arglist[end+1:] )
+        plot_options_basic = self.plot_options_basic
+        
+        # regex for table name
+        expr_filename = re.compile(r'\w+[-_]?\w+')
+
+        # connect to database
+        host = self.arglist[2]
+        user = self.arglist[3]
+        database = self.arglist[4]
+        passwd = getpass.getpass()
+        try:
+            # check if succesful connection to DB is made
+            con = mdb.connect( host,user,passwd,database )
+        except mdb.OperationalError:
+            print 'Could not connect to database '+ database
+            sys.exit()
+        
+        dframes = []
+        titles = []
+        for i in xrange( 5,end ):
+            try:
+                # checking if table exists
+                df = self._readsql( self.arglist[i],con )
+            except mdb.ProgrammingError:
+                # error reading table
+                print 'Table does not exist'
+                sys.exit()
+            m = expr_filename.search(self.arglist[i])
+            if m:
+                titles.append( m.group() )
+            else:
+                titles.append( 'datafile '+str(i) )
+            if plot_options_given:
+                # split the dataframe into X and Y's
+                dfX = df.ix[0,:]
+                dfY = df.ix[:,1:]
+                for e in plot_options_given:
+                    # take care of basic options
+                    # except the log-scaling
+                    if e == 'absy':
+                        dfY = dfY.abs()
+                    elif e == 'absx':
+                        dfX = dfX.abs()
+                    elif e == 'absxy':
+                        dfY = dfY.abs()
+                        dfX = dfX.abs()
+                    # take care of user-defined options
+                    elif e not in plot_options_basic[3:]:
+                        dfX, dfY = self._dfTransform(dfX,dfY,e)
+                # take care of the log-scaling
+                # we take the absolute value
+                # after having taken care of all
+                # other plot options
+                if 'logy' in plot_options_given:
+                    dfY = dfY.abs()
+                elif 'logx' in plot_options_given:
+                    dfX = dfX.abs()
+                elif 'logxy' in plot_options_given:
+                    dfY = dfY.abs()
+                    dfX = dfX.abs()
+                # collecting dfX and dfY to get back df
+                dfY.insert(0,'X',dfX)
+                df = dfY
+                dframes.append( df )
+            else:
+                # no plot options
+                dframes.append( df )
+        return dframes, titles
+
+    def finalPlot(self):
+        """
+        Plots the dataframes and saves the plotted file as a pdf.
+
+        Returns the file name of the plotted file.
+        """
+        end = self._tables()
+        # no. of plots or data files
+        nplots = end - 1
+        
+        # figuring out the number of columns
+        # and rows for the grid-plot
+        # depends on the number of datafiles
+        if nplots%2==0:
+            nrows = nplots/2
+            ncols = 2
+        elif nplots%2==1:
+            if nplots/2==0:
+                nrows = 1
+                ncols = 1
+            else:
+                nrows = nplots/2+1
+                ncols = 2
+
+        # creating a 'hopefully' unique file-name
+        # by appending the pid to the name
+        filename = 'tmppyplot' + str( os.getpid() ) + '.pdf'
+        
+        dframes, titles = self._dframesList()
+        if 'logy' in sys.argv:
+            self._dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   logy=True,
+                   save=True,
+                   titles=titles,
+                   filename=filename) 
+        elif 'logx' in sys.argv:
+            self._dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   logx=True,
+                   save=True,
+                   titles=titles,
+                   filename=filename)
+        elif 'logxy' in sys.argv:
+            self._dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   loglog=True,
+                   save=True,
+                   titles=titles,
+                   filename=filename)
+        else:
+            self._dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   save=True,
+                   titles=titles,
+                   filename=filename)
+        return filename
+# --------------------- xxx ------------ (VI) database class
+
+
+# ----------------------- (VII) class instantiation -----------------------
 # creating instance of database or datafile
 # as per the command-line information
+# its kind of "case-select"-ion
 if 'db' in sys.argv:
-    pass
+    plotData = Database( sys.argv )
 else:
     plotData = Datafile( sys.argv )
+# ---------------------- xxx ---------- (VII) class instantiation
 
-# ----------------- VIEWING THE PLOTS -----------
+
+# ----------------- (VIII) VIEWING THE PLOTS -----------
 # use evince to view the plots
 # it deletes the created .pdf plot files after viewing
 # i.e., after the plot window is closed
@@ -514,4 +723,4 @@ filename = plotData.finalPlot()
 readpdf = subprocess.Popen(['evince', filename], shell=False)
 readpdf.wait()      # wait till evince window is closed
 subprocess.Popen(['rm', filename], shell=False )
-# --------------- xxx -------- VIEWS
+# --------------- xxx -------- (VIII) VIEWS
