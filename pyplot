@@ -12,135 +12,14 @@ import matplotlib.pyplot as plt
 # ------------------- xxx -------------------- (I) LIBRARIES
 
 
-# ---------------------(II) FIGURE SETTINGS -------------------
+# ------------------ (II) what the program does ------------------
 """
-Some of the setting for the plots. These are the
-default settings for all figure.
-"""
-# figure size
-plt.rc('figure', figsize=(8.5, 5.0))
-# font size for axes tics
-plt.rc('font', size=15.0) 
-# linewidth
-plt.rc('lines', linewidth=1.8)
-# axes or frame 
-plt.rc('axes', linewidth=1.5)
-# xticks
-plt.rc('xtick.major', size=6.0, width=1.5)
-plt.rc('xtick.minor', size=3.0, width=1.5)
-# yticks
-plt.rc('ytick.major', size=6.0, width=1.5)
-plt.rc('ytick.minor', size=3.0, width=1.5)
+The program plots datafile(s) or table(s) from a database
+with various user provided plot options, and outputs a pdf plot.
+The plot is automatically opened using evince, and after
+the evince-window is closed, the plotted file is deleted.
+It is primarily meant to view data on the fly!
 
-# line colors, blue, black, red, magenta, green
-colors = ['b','k','r','m','g','c']
-# --------------------------- xxx --------------- (II) FIGURE SETTINGS
-
-
-# ------------------- (III) READ FUNCTION FOR DATA FILE  --------------
-"""
-It takes as input the
-1> datafile name 
-2> the column names
-
-It outputs a dataframe
-
-The input file has data in the
-form of columns, separated by white space
-( and NOT comma separated )
-
-The data has to be of the form
-X, Y0, Y1, Y2, etc.
-where we are interested in plotting
-Y's vs X as a line plot.
-All X and Y's must be numeric.
-
-The data file can have comments
-where the comment lines has to
-start with #
-
-We later asign default column names
-as X, Y0, Y1, Y2, etc to all columns
-"""
-# drop comment lines
-# backfill NAN values
-def readcsv(filename,col=[]):
-    f = pd.read_csv(filename,
-                    comment='#',
-                    header=None,
-                    names=col,
-                    sep=r"\s+",
-                    skipinitialspace=True).dropna()
-    f = f.convert_objects(convert_numeric=True)
-    f = f.fillna(method='bfill') 
-    f.index = range(f.shape[0])
-    return f
-# ----------------------- xxx --------------- (III) READ DATA FUNCTION
-
-
-# ------------------- (IV) FUNCTION FOR DATAFRAME PLOTTING ----------------
-"""
-The function takes as input 
-a list whose elements are dataframes.
-They are plotted in a grid-like view
-with # columns = ncols
-and # rows = nrows.
-ncols & nrows depend on the number of
-datafiles to be plotted and are to be
-determined depending on the command prompt.
-"""
-
-def dfplot(dframes,
-           figsize=[13,4],
-           nrows=1,ncols=1,
-           legend=True,
-           logx=False,logy=False,loglog=False,
-           xlabel='',ylabel='',
-           titles=[''],
-           save=True,
-           filename=''):
-    fig = plt.figure(figsize=figsize)
-    # max number of figures
-    # that can be included 
-    # in the grid-view
-    figs = nrows*ncols
-    
-    # number of dataframes
-    # we want to plot
-    plts = len( dframes )
-    
-    for i in xrange(plts):
-        ax = fig.add_subplot(nrows,ncols,i+1)
-        if i>=len(titles):
-            titles.append('')               
-        ax = dframes[i].plot(x=dframes[i].columns.values[0],
-                             logy=logy,
-                             logx=logx,
-                             loglog=loglog,
-                             color=colors,
-                             legend=legend,
-                             ax=ax)      
-        ax.legend(loc='best', fancybox=True, framealpha=0.5)
-        
-        # some text
-        if xlabel:
-            ax.set_xlabel(xlabel, fontsize=22)
-
-        ax.set_ylabel(ylabel, fontsize=22)
-        ax.set_title(titles[i], fontsize=20, y=1.05)
-        
-    # grid display spacing
-    fig.tight_layout(w_pad=5.0, h_pad=2.0)
-    if save:
-        if filename:
-            fig.savefig(filename)
-        else:
-            fig.savefig('fig.pdf')
-# -------------------- xxx ------------ (IV) PLOTTING DATAFRAME FUNCTION
-
-
-# ------------------- (V) PARSING COMMAND PROMPTS ------------
-"""
 The command line arguments should be of the form
 ( and must appear in the order specified )
 1> datafiles (1 or many)
@@ -167,312 +46,471 @@ The command line arguments should be of the form
     above form, but need not provide the full expr,
     i.e., 3.0+y is a valid expression.
 """
-
-# below are code sub-sections for parsing the command-line
-
-#                       V(a) plot options and regex
-# basic plot options
-# these are the options that
-# are provide by default
-plot_options_basic = ['absy','absx','absxy','logy','logx','logxy']
-
-# we now provide the framework for
-# some user definable options
-# regex patterns of the form
-# 1> a + b*r**c
-# 2> a + b*r*c
-# 3> a + b*r + c
-# where a,b,c are +/-floats, and if zero, need not be entered
-# and r=> xy|x|y
-# we need to parse all the individual elements
-# such as a,b,+-*,r,c
-# so we use parenthesis '()' to create appropriate groups
-# that will be easily identified in re.match.groups()
-# float regex: r'[-+]?[0-9]*\.?[0-9]+'
-expr_pattern = re.compile(r'([-+]?)([0-9]*\.?[0-9]*)'
-                          r'([-+*]?)([0-9]*\.?[0-9]*)'
-                          r'\*?'
-                          r'([x-y]+)'
-                          r'([*^]{0,2})'
-                          r'[(]?'
-                          r'([-+]?)([0-9]*\.?[0-9]*)'
-                          r'[)]?')
+# -------------------- xxx ----------- (II) preliminary documentation
 
 
-#              V(b) No. of datafiles and No. of columns
-# finding out the number of columns in each
-# data files from the cols argument
-if 'cols' not in sys.argv:
-    print 'enter the number of columns as cols int'
-    sys.exit()
-else:
-    for i,j in list( enumerate(sys.argv) ):
-        if j=='cols':
-            try:
-                ncols = int( sys.argv[i+1] )
-            except TypeError:
-                print 'enter column no. (int) after cols'
-                sys.exit()
-            except ValueError:
-                print 'enter column no. (int) after cols'
-                sys.exit()
-            end = i # no. of datafiles!
+# ---------------------(III) FIGURE SETTINGS -------------------
+"""
+Some of the setting for the plots. These are the
+default settings for all figure.
+"""
+# figure size
+plt.rc('figure', figsize=(8.5, 5.0))
+# font size for axes tics
+plt.rc('font', size=15.0) 
+# linewidth
+plt.rc('lines', linewidth=1.8)
+# axes or frame 
+plt.rc('axes', linewidth=1.5)
+# xticks
+plt.rc('xtick.major', size=6.0, width=1.5)
+plt.rc('xtick.minor', size=3.0, width=1.5)
+# yticks
+plt.rc('ytick.major', size=6.0, width=1.5)
+plt.rc('ytick.minor', size=3.0, width=1.5)
 
-# naming the cols as X, Y0, Y1, etc
-# to be used by the dataframes to be created
-col = ['X']
-for i in xrange(1,ncols):
-    label = 'Y'+str(i-1)
-    col.append(label)
+# line colors, blue, black, red, magenta, green
+colors = ['b','k','r','m','g','c']
+# --------------------------- xxx --------------- (III) FIGURE SETTINGS
 
+
+# ------------------------ (IV) base class ----------------------
+class BaseParse:
+    """
+    A base class that would parse command-line plot options.
     
-#             V(c) given (basic and user-defined) plot options
-# getting all of the plot options
-# while maintaining the SAME ORDER AS ENTERED by the user
-# both the basic options and user defined ones
-plot_options_given = sys.argv[end+2:]
+    i.e., parse command-line arguments that would appear both for
+    the database and datafile cases, and also create some generic
+    functions that would work for both cases.
 
-# the entered user defined options may not conform
-# to the allowed expression patterns or basic options
-# so, we parse the user defined option(s),
-# check the conformity, and then store
-# the associated parsed info replacing the givn expression
-for i,e in list( enumerate(plot_options_given) ):
-    if e not in plot_options_basic:
-        m = expr_pattern.match(e)
-        if m:
-            # we replace the user defined options
-            # that are beyond the default options
-            # with parsed expressions using regex.groups
-            plot_options_given[i] = m.groups()
-        else:
-            s1 = 'un-supported user defined option: ' + str(e)
-            s2 = 'allowed options are of the form:'
-            s3 = '1> a+b*r**c or a+b*r^c, 2> a+b*r*c, 3> a+b*r+c'
-            s4 = 'r => xy|x|y and a,b,c are +/-floats'
-            s5 = 'if any of a,b,c = 0.0, they need not be mentioned'
-            s6 = 'resulting plot with other options (if any)'
-            print '\n'+s1+'\n'+s2+'\n'+s3+'\n'+s4+'\n'+s5+'\n'+s6+'\n'
-            # we flag this 'wrong' user-defined option
-            # and will remove it later
-            plot_options_given[i] = 'del'
+    There is no __init__ in this BaseParse class.
+    The two subclasses, a> Datafile, b>Database,
+    has appropriate __init__ methods.
+    """
 
-# remove the 'wrong' plot options which has been flagged           
-for e in plot_options_given:
-    if e == 'del':
-        plot_options_given.remove(e)
-        
-# creating a function that will take
-# 1> a user defined plot option
-# 2> two dataframes, dfX and dfY
-# dfX => X column, and dfY => Y columns
-# and return the transformed dataframes
-# after applying the plot options
-def sign(str):
-    # function to determine positive or negative
-    if str == '+' or str == '':
-        c = 1.0
-    else:
-        c = -1.0
-    return c
-    
-def df_transform(dfX,dfY,ops):
-    # function to transform dataframes
-    # ops is one of the plot option
-    if ops[7]:
-        c = sign( ops[6] )*float( ops[7] )
-    else:
-        c = 1
-    if ops[1] and ops[3]:
-        a = sign( ops[0] )*float( ops[1] )
-        b = sign( ops[2] )*float( ops[3] )
-    if not ops[3] and ops[1]:
-        if ops[2] == '+' or ops[2] == '-':
-            a = sign( ops[0] )*float( ops[1] )
-            b = sign( ops[2] )*1.0
-        elif not ops[2] or ops[2] == '*':
-            a = 0.0
-            b = sign( ops[0] )*float( ops[1] )
-    if not ops[1] and not ops[3]:
-        a, b = 0.0, 1.0
-    if ops[5] == '**' or ops[5] == '^':
-        if 'y' in ops:
-            dfY = a + b*dfY**c
-        elif 'x' in ops:
-            dfX = a + b*dfX**c
-        else:
-            dfY = a + b*dfY**c
-            dfX = a + b*dfX**c
-    elif not ops[5] and ops[6]:
-        if 'y' in ops:
-            dfY = a + b*dfY + c
-        elif 'x' in ops:
-            dfX = a + b*dfX + c
-        else:
-            dfY = a + b*dfY + c
-            dfX = a + b*dfX + c
-    else: # ops[5] = '*'
-        if 'y' in ops:
-            dfY = a + b*dfY*c
-        elif 'x' in ops:
-            dfX = a + b*dfX*c
-        else:
-            dfY = a + b*dfY*c
-            dfX = a + b*dfX*c
-    return dfX, dfY
+    # basic or default plot options that are
+    # provided or recognized by the program
+    # irrespective of any case
+    plot_options_basic = ['absy','absx','absxy','logy','logx','logxy']
 
-    
-#                  V(d) creating dataframes from data files 
-# reading in the data files
-# ( NOTE: all datafiles are entered before 'cols' )
-# and creating a list of dataframes
-# AFTER applying the given plot options to the data
-# both basic and user defined plot options are implemented
-# serially, i.e., in the same order as they appear
-# in the command line
-# ( only 'log-scale' options will be implemented later )
+    # we now provide the framework for
+    # some user definable options
+    # regex patterns of the form
+    # 1> a + b*r**c
+    # 2> a + b*r*c
+    # 3> a + b*r + c
+    # where a,b,c are +/-floats, and if zero, need not be entered
+    # and r=> xy|x|y
+    # we need to parse all the individual elements
+    # such as a,b,+-*,r,c
+    # so we use parenthesis '()' to create appropriate groups
+    # that will be easily identified in re.match.groups()
+    # float regex: r'[-+]?[0-9]*\.?[0-9]+'
+    # (note:) these options hold for both database/datafile case    
+    expr_pattern = re.compile(r'([-+]?)([0-9]*\.?[0-9]*)'
+                              r'([-+*]?)([0-9]*\.?[0-9]*)'
+                              r'\*?'
+                              r'([x-y]+)'
+                              r'([*^]{0,2})'
+                              r'[(]?'
+                              r'([-+]?)([0-9]*\.?[0-9]*)'
+                              r'[)]?')
 
-# regex for file name
-# we only pick the file name if it has en extension
-# in the absence of which, we name it as datafile 1, etc
-expr_filename = re.compile(r'\w+[-_]?\w+[.]\w+')
+    #def __init__(self,arg_list):
+        # arg_list is the sys.argv command-line options
+        #self.arglist = arg_list
 
-dframes = []
-titles = []
-for i in xrange( 1,end ):
-    try:
-        # checking if datafile exists
-        # or if no. of cols entered is correct
-        df = readcsv( sys.argv[i],col )
-    except IOError:
-        # file does not exist
-        if sys.argv[i] not in plot_options_basic:
-            s = 'file ' + str( sys.argv[i] ) + ' does not exist'
-            print s
-            sys.exit()
-        else:
-            s = 'plot options must appear after cols'
-            print s
-            sys.exit()
-    except ValueError:
-        # wrong no. of cols entered
-        # NOTE: ensure each datafile has same
-        # number of columns
-        s1 = 'enter correct no. of columns in each file'
-        s2 = ' or check their compatibility'
-        print s1+s2
-        sys.exit()
-    # creating plot name from the datafile name
-    m = expr_filename.search(sys.argv[i])
-    if m:
-        titles.append( m.group() )
-    else:
-        titles.append( 'datafile '+str(i) )
-    if plot_options_given:
-        # split the dataframe into X and Y's
-        dfX = df.X
-        dfY = df.ix[:,1:]
+    def _parsedOptions(self,plot_options_given):
+        # ( plot_options_given are the 'raw' or 'un-edited' 
+        # user-given PLOT-OPTIONS on the command-line
+        # and NOT the entire list of command-line arguments )
+        # the entered user defined options may not conform
+        # to the allowed expression patterns or basic options
+        # so, we parse the user defined option(s),
+        # check the conformity, and then store
+        # the associated parsed info replacing the given expression
+        for i,e in list( enumerate(plot_options_given) ):
+            if e not in self.plot_options_basic:
+                m = self.expr_pattern.match(e)
+                if m:
+                    # we replace the user defined options
+                    # that are beyond the default options
+                    # with parsed expressions using regex.groups
+                    plot_options_given[i] = m.groups()
+                else:
+                    s1 = 'un-supported user defined option: ' + str(e)
+                    s2 = 'allowed options are of the form:'
+                    s3 = '1> a+b*r**c or a+b*r^c, 2> a+b*r*c, 3> a+b*r+c'
+                    s4 = 'r => xy|x|y and a,b,c are +/-floats'
+                    s5 = 'if any of a,b,c = 0.0, they need not be mentioned'
+                    s6 = 'resulting plot with other options (if any)'
+                    print '\n'+s1+'\n'+s2+'\n'+s3+'\n'+s4+'\n'+s5+'\n'+s6+'\n'
+                    # we flag this 'wrong' user-defined option
+                    # and will remove it later
+                    plot_options_given[i] = 'del'
+                                                                               
+        # remove the 'wrong' plot options which has been flagged           
         for e in plot_options_given:
-            # take care of basic options
-            # except the log-scaling
-            if e == 'absy':
-                dfY = dfY.abs()
-            elif e == 'absx':
-                dfX = dfX.abs()
-            elif e == 'absxy':
-                dfY = dfY.abs()
-                dfX = dfX.abs()
-            # take care of user-defined options
-            elif e not in plot_options_basic[3:]:
-                dfX, dfY = df_transform(dfX,dfY,e)
-        # take care of the log-scaling
-        # we take the absolute value
-        # after having taken care of all
-        # other plot options
-        if 'logy' in plot_options_given:
-            dfY = dfY.abs()
-        elif 'logx' in plot_options_given:
-            dfX = dfX.abs()
-        elif 'logxy' in plot_options_given:
-            dfY = dfY.abs()
-            dfX = dfX.abs()
-        # collecting dfX and dfY to get back df
-        dfY.insert(0,'X',dfX)
-        df = dfY
-        dframes.append( df )
-    else:
-        # no plot options
-        dframes.append( df )
+            if e == 'del':
+                plot_options_given.remove(e)
+        # return the list of parsed plot-options
+        return plot_options_given
     
+    def _dfTransform(self,dfX,dfY,ops):
+        # creating a function that will take
+        # 1> a user defined plot options
+        # ( that are outside basic options )
+        # 2> two dataframes, dfX and dfY
+        # dfX => X column, and dfY => Y columns
+        # and return the transformed dataframes
+        # after applying the plot options
+        def sign(str):
+            # function to determine positive or negative
+            if str == '+' or str == '':
+                c = 1.0
+            else:
+                c = -1.0
+            return c
 
-#                    V(e) creating 2XN grid for plots 
-# no. of plots or data files
-nplots = end - 1
+        # function to transform dataframes
+        # ops is one of the plot options
+        if ops[7]:
+            c = sign( ops[6] )*float( ops[7] )
+        else:
+            c = 1
+        if ops[1] and ops[3]:
+            a = sign( ops[0] )*float( ops[1] )
+            b = sign( ops[2] )*float( ops[3] )
+        if not ops[3] and ops[1]:
+            if ops[2] == '+' or ops[2] == '-':
+                a = sign( ops[0] )*float( ops[1] )
+                b = sign( ops[2] )*1.0
+            elif not ops[2] or ops[2] == '*':
+                a = 0.0
+                b = sign( ops[0] )*float( ops[1] )
+        if not ops[1] and not ops[3]:
+            a, b = 0.0, 1.0
+        if ops[5] == '**' or ops[5] == '^':
+                dfY_tmp = a + b*dfY**c
+                dfX_tmp = a + b*dfX**c
+        elif not ops[5] and ops[6]:
+                dfY_tmp = a + b*dfY + c
+                dfX_tmp = a + b*dfX + c
+        else: # ops[5] = '*'
+                dfY_tmp = a + b*dfY*c
+                dfX_tmp = a + b*dfX*c
+        if 'y' in ops:
+            dfY = dfY_tmp
+        elif 'x' in ops:
+            dfX = dfX_tmp
+        else:
+            dfY = dfY_tmp
+            dfX = dfX_tmp
+        return dfX, dfY
+# --------------------- xxx ------------ (IV) base class
 
-# figuring out the number of columns
-# and rows for the grid-plot
-# depends on the number of datafiles
-if nplots%2==0:
-    nrows = nplots/2
-    ncols = 2
-elif nplots%2==1:
-    if nplots/2==0:
-        nrows = 1
-        ncols = 1
-    else:
-        nrows = nplots/2+1
-        ncols = 2
-# ----------------------- xxx ---------------- (V) COMMAND PROMPTS
 
+# ------------------------ (V) datafile class ----------------------
+class Datafile(BaseParse):
+    """
+    Class for the case of datafiles as command-line input.
 
-# -------------------- PLOT OF DATAFILES ------------------
-# creating a 'hopefully' unique file-name
-# by appending the pid to the name
-filename = 'tmppyplot' + str( os.getpid() ) + '.pdf'
+    It inherits from class BaseParse, and adds new "datafile"
+    specific class methods.
+    """
+    def __init__(self,arg_list):
+        # arg_list is in general sys.argv
+        # i.e, the list of command-line arguments
+        self.arglist = arg_list
 
-if 'logy' in sys.argv:
-    dfplot(dframes,
-           nrows=nrows,
-           ncols=ncols,
-           figsize=[7.5*ncols,5*nrows],
-           logy=True,
-           save=True,
-           titles=titles,
-           filename=filename) 
-elif 'logx' in sys.argv:
-    dfplot(dframes,
-           nrows=nrows,
-           ncols=ncols,
-           figsize=[7.5*ncols,5*nrows],
-           logx=True,
-           save=True,
-           titles=titles,
-           filename=filename)
-elif 'logxy' in sys.argv:
-    dfplot(dframes,
-           nrows=nrows,
-           ncols=ncols,
-           figsize=[7.5*ncols,5*nrows],
-           loglog=True,
-           save=True,
-           titles=titles,
-           filename=filename)
+    def _readcsv(self,filename,col=[]):
+        """
+        reads a datafile and returns a corresponding dataframe.
+        
+        It takes as input the
+        1> datafile name ( filename ) 
+        2> the column names ( default, empty list ),
+        and outputs a dataframe.
+        
+        The input file has data in the form of columns, separated by
+        white space ( and NOT comma separated ).
+        
+        The data in the input file has to be of the form X, Y0, Y1, Y2, etc.,
+        where we are interested in plotting Y's vs X as a line plot.
+        All X and Y's must be numeric.
+        
+        The data file can have comments where the comment lines has to
+        start with the character "#".
+        
+        We later asign default column names X, Y0, Y1, Y2, etc to all columns.
+        """
+        # drop comment lines
+        # backfill NAN values
+        f = pd.read_csv(filename,
+                        comment='#',
+                        header=None,
+                        names=col,
+                        sep=r"\s+",
+                        skipinitialspace=True).dropna()
+        f = f.convert_objects(convert_numeric=True)
+        f = f.fillna(method='bfill') 
+        f.index = range(f.shape[0])
+        return f
+
+    def _readColumns(self):
+        """
+        Finding out the number of columns in each data file.
+
+        Uses the "cols" argument in the sys.argv list.
+        Returns:
+        a> No. of datafiles
+        b> assigned column names, as X, Y0, Y1, Y2, etc.
+        """
+        if 'cols' not in self.arglist:
+            print 'enter the number of columns as cols int'
+            sys.exit()
+        else:
+            for i,e in list( enumerate(self.arglist) ):
+                if e=='cols':
+                    try:
+                        ncols = int( self.arglist[i+1] )
+                    except TypeError:
+                        print 'enter column no. (int) after cols'
+                        sys.exit()
+                    except ValueError:
+                        print 'enter column no. (int) after cols'
+                        sys.exit()
+                    end = i # no. of datafiles!
+        # naming the cols of each dataframe as X, Y0, Y1, etc
+        # to be used by the dataframes to be created
+        col = ['X']
+        for i in xrange(1,ncols):
+            label = 'Y'+str(i-1)
+            col.append(label)
+        return end, col
+
+    def _dframesList(self):
+        """
+        Parsing command-line and creating dataframes from given data files.
+        
+        ( NOTE: all datafiles are entered before keyword 'cols' ).
+        Creating a list of dataframes AFTER applying the given plot
+        options to the data, both basic and user defined plot options
+        are implemented serially, i.e., in the same order as they appear
+        in the command line.
+        ( only 'log-scale' option will be implemented at the end. )
+        """
+        end, col = self._readColumns()
+        plot_options_given = self._parsedOptions( self.arglist[end+2:] )
+        plot_options_basic = self.plot_options_basic
+        
+        # regex for file name
+        # we only pick the file name if it has en extension
+        # in the absence of which, we name it as datafile 1, etc
+        expr_filename = re.compile(r'\w+[-_]?\w+[.]\w+')
+        
+        dframes = []
+        titles = []
+        for i in xrange( 1,end ):
+            try:
+                # checking if datafile exists
+                # or if no. of cols entered is correct
+                df = self._readcsv( self.arglist[i],col )
+            except IOError:
+                # file does not exist
+                if self.arglist[i] not in plot_options_basic:
+                    s = 'file ' + str( self.arglist[i] ) + ' does not exist'
+                    print s
+                    sys.exit()
+                else:
+                    s = 'plot options must appear after cols'
+                    print s
+                    sys.exit()
+            except ValueError:
+                # wrong no. of cols entered
+                # NOTE: ensure each datafile has same
+                # number of columns
+                s1 = 'enter correct no. of columns in each file'
+                s2 = ' or check their compatibility'
+                print s1+s2
+                sys.exit()
+                # creating plot name from the datafile name
+            m = expr_filename.search(self.arglist[i])
+            if m:
+                titles.append( m.group() )
+            else:
+                titles.append( 'datafile '+str(i) )
+            if plot_options_given:
+                # split the dataframe into X and Y's
+                dfX = df.X
+                dfY = df.ix[:,1:]
+                for e in plot_options_given:
+                    # take care of basic options
+                    # except the log-scaling
+                    if e == 'absy':
+                        dfY = dfY.abs()
+                    elif e == 'absx':
+                        dfX = dfX.abs()
+                    elif e == 'absxy':
+                        dfY = dfY.abs()
+                        dfX = dfX.abs()
+                    # take care of user-defined options
+                    elif e not in plot_options_basic[3:]:
+                        dfX, dfY = self._dfTransform(dfX,dfY,e)
+                # take care of the log-scaling
+                # we take the absolute value
+                # after having taken care of all
+                # other plot options
+                if 'logy' in plot_options_given:
+                    dfY = dfY.abs()
+                elif 'logx' in plot_options_given:
+                    dfX = dfX.abs()
+                elif 'logxy' in plot_options_given:
+                    dfY = dfY.abs()
+                    dfX = dfX.abs()
+                # collecting dfX and dfY to get back df
+                dfY.insert(0,'X',dfX)
+                df = dfY
+                dframes.append( df )
+            else:
+                # no plot options
+                dframes.append( df )
+        return dframes, titles
+
+    def _dfPlot(self,
+                dframes,
+                figsize=[13,4],
+                nrows=1,ncols=1,
+                legend=True,
+                logx=False,logy=False,loglog=False,
+                xlabel='',ylabel='',
+                titles=[''],
+                save=True,
+                filename=''):
+        """
+        Generic function for plotting dataframes.
+
+        Input: A list of dataframes, containing one or several elements.
+               Each dataframe corresponds to a given datafile.
+        Output: A single pdf plot of all the dataframes in a grid-like view.
+        """
+        fig = plt.figure(figsize=figsize)
+        # max number of figures
+        # that can be included 
+        # in the grid-view
+        figs = nrows*ncols
+        
+        # number of dataframes
+        # we want to plot
+        plts = len( dframes )
+    
+        for i in xrange(plts):
+            ax = fig.add_subplot(nrows,ncols,i+1)
+            if i>=len(titles):
+                titles.append('')               
+            ax = dframes[i].plot(x=dframes[i].columns.values[0],
+                             logy=logy,
+                             logx=logx,
+                             loglog=loglog,
+                             color=colors,
+                             legend=legend,
+                             ax=ax)      
+            ax.legend(loc='best', fancybox=True, framealpha=0.5)
+        
+        # some text
+        if xlabel:
+            ax.set_xlabel(xlabel, fontsize=22)
+        ax.set_ylabel(ylabel, fontsize=22)
+        ax.set_title(titles[i], fontsize=20, y=1.05)
+        
+        # grid display spacing
+        fig.tight_layout(w_pad=5.0, h_pad=2.0)
+        if save:
+            if filename:
+                fig.savefig(filename)
+            else:
+                fig.savefig('fig.pdf')
+
+    def finalPlot(self):
+        """
+        Plots the dataframes and saves the plotted file as a pdf.
+
+        Returns the file name of the plotted file.
+        """
+        end, col = self._readColumns()
+        # no. of plots or data files
+        nplots = end - 1
+        
+        # figuring out the number of columns
+        # and rows for the grid-plot
+        # depends on the number of datafiles
+        if nplots%2==0:
+            nrows = nplots/2
+            ncols = 2
+        elif nplots%2==1:
+            if nplots/2==0:
+                nrows = 1
+                ncols = 1
+            else:
+                nrows = nplots/2+1
+                ncols = 2
+
+        # creating a 'hopefully' unique file-name
+        # by appending the pid to the name
+        filename = 'tmppyplot' + str( os.getpid() ) + '.pdf'
+        
+        dframes, titles = self._dframesList()
+        if 'logy' in sys.argv:
+            self._dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   logy=True,
+                   save=True,
+                   titles=titles,
+                   filename=filename) 
+        elif 'logx' in sys.argv:
+            dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   logx=True,
+                   save=True,
+                   titles=titles,
+                   filename=filename)
+        elif 'logxy' in sys.argv:
+            dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   loglog=True,
+                   save=True,
+                   titles=titles,
+                   filename=filename)
+        else:
+            dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   save=True,
+                   titles=titles,
+                   filename=filename)
+        return filename
+# --------------------- xxx ------------ (IV) datafile class
+
+# creating instance of database or datafile
+# as per the command-line information
+if 'db' in sys.argv:
+    pass
 else:
-    dfplot(dframes,
-           nrows=nrows,
-           ncols=ncols,
-           figsize=[7.5*ncols,5*nrows],
-           save=True,
-           titles=titles,
-           filename=filename)
-# ------------------- xxx ----------------- PLOTS
-
+    plotData = Datafile( sys.argv )
 
 # ----------------- VIEWING THE PLOTS -----------
 # use evince to view the plots
 # it deletes the created .pdf plot files after viewing
 # i.e., after the plot window is closed
 
+filename = plotData.finalPlot()
 readpdf = subprocess.Popen(['evince', filename], shell=False)
 readpdf.wait()      # wait till evince window is closed
 subprocess.Popen(['rm', filename], shell=False )
