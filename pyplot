@@ -57,6 +57,7 @@ case Database(DB) :
    3> keyword "use" to mark end of table names
    4> plot options as in the datafile case
    5> after pressing ENTER, there will be a password prompt for the DB.
+   NOTE: The TABLE(s) in the DB should have numeric columns.
 """
 # -------------------- xxx ----------- (II) preliminary documentation
 
@@ -169,14 +170,16 @@ class BaseParse:
         # return the list of parsed plot-options
         return plot_options_given
     
-    def _dfTransform(self,dfX,dfY,ops):
-        # creating a function that will take
-        # 1> a user defined plot options
-        # ( that are outside basic options )
-        # 2> two dataframes, dfX and dfY
-        # dfX => X column, and dfY => Y columns
-        # and return the transformed dataframes
-        # after applying the plot options
+    def _dfTransformSingle(self,dfX,dfY,ops):
+        """
+        Returns a transformed DFrame according to user-defined plot options.
+
+        creating a function that will take:
+        1> one user defined plot option "ops" ( EXCLUDING basic options )
+        2> two dataframes, dfX and dfY
+           dfX => X column, and dfY => Y columns
+        and return the transformed dataframes after applying the plot options.
+        """
         def sign(str):
             # function to determine positive or negative
             if str == '+' or str == '':
@@ -221,6 +224,61 @@ class BaseParse:
             dfX = dfX_tmp
         return dfX, dfY
 
+    def _dfTransformedList(self,dfList,opsList):
+        """
+        Returns a transformed LIST of Dframes from an initial list of DFs.
+
+        We initially read data into dataframes and create a list of DFs.
+        However, we need to modify these dataframes according to the
+        user-defined plot options. This function essentially does that.
+
+        It takes as input
+        1> list of dataframes directly created from datafiles/tables
+        2> list of user-defined plot operations
+
+        It applies these plot operations serially, and returns the
+        transformed list of dataframes.
+        """
+        plot_options_basic = self.plot_options_basic
+        if opsList:
+            for i in xrange( len(dfList) ):
+                # split the dataframe into X and Y's
+                df = dfList[i]
+                dfX = dfList[i].ix[:,0]
+                dfY = dfList[i].ix[:,1:]
+                for e in opsList:
+                    # take care of basic options
+                    # except the log-scaling
+                    if e == 'absy':
+                        dfY = dfY.abs()
+                    elif e == 'absx':
+                        dfX = dfX.abs()
+                    elif e == 'absxy':
+                        dfY = dfY.abs()
+                        dfX = dfX.abs()
+                    # take care of user-defined options
+                    elif e not in plot_options_basic[3:]:
+                        dfX, dfY = self._dfTransformSingle(dfX,dfY,e)
+                # take care of the log-scaling
+                # we take the absolute value
+                # after having taken care of all
+                # other plot options
+                if 'logy' in opsList:
+                    dfY = dfY.abs()
+                elif 'logx' in opsList:
+                    dfX = dfX.abs()
+                elif 'logxy' in opsList:
+                    dfY = dfY.abs()
+                    dfX = dfX.abs()
+                # collecting dfX and dfY to get back df
+                Xname = df.columns.tolist()[0]
+                dfY.insert(0,Xname,dfX)
+                df = dfY
+                dfList[i] = df
+        else:
+            pass
+        return dfList
+        
     def _readcsv(self,filename,col=[]):
         """
         Generic function to create dataframe from a corresponding datafile.
@@ -285,7 +343,7 @@ class BaseParse:
         Generic function for plotting a list of dataframes.
 
         Input: A list of dataframes, containing one or several elements.
-               Each dataframe corresponds to a given datafile.
+               Each dataframe corresponds to a given datafile or table.
         Output: A single pdf plot of all the dataframes in a grid-like view.
         """
         fig = plt.figure(figsize=figsize)
@@ -311,11 +369,11 @@ class BaseParse:
                              ax=ax)      
             ax.legend(loc='best', fancybox=True, framealpha=0.5)
         
-        # some text
-        if xlabel:
-            ax.set_xlabel(xlabel, fontsize=22)
-        ax.set_ylabel(ylabel, fontsize=22)
-        ax.set_title(titles[i], fontsize=20, y=1.05)
+            # some text
+            if xlabel:
+                ax.set_xlabel(xlabel, fontsize=22)
+            ax.set_ylabel(ylabel, fontsize=22)
+            ax.set_title(titles[i], fontsize=20, y=1.05)
         
         # grid display spacing
         fig.tight_layout(w_pad=5.0, h_pad=2.0)
@@ -324,6 +382,54 @@ class BaseParse:
                 fig.savefig(filename)
             else:
                 fig.savefig('fig.pdf')
+
+    def _plotpdf(self,dframes,arglist,nrows=1,ncols=1,filename='',titles=''):
+        """
+        Creates a pdf file of the plotted datafiles/tables.
+
+        input:
+        1> list of "final" dataframes
+        2> arglist is sys.argv
+        3> nrows,ncols corresponds to the grid view of the plot
+        4> filename of the plotted file.
+        """
+        if 'logy' in arglist:
+            self._dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   logy=True,
+                   save=True,
+                   titles=titles,
+                   filename=filename) 
+        elif 'logx' in arglist:
+            self._dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   logx=True,
+                   save=True,
+                   titles=titles,
+                   filename=filename)
+        elif 'logxy' in arglist:
+            self._dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   loglog=True,
+                   save=True,
+                   titles=titles,
+                   filename=filename)
+        else:
+            self._dfPlot(dframes,
+                   nrows=nrows,
+                   ncols=ncols,
+                   figsize=[7.5*ncols,5*nrows],
+                   save=True,
+                   titles=titles,
+                   filename=filename)
+        return filename
+
 # --------------------- xxx ------------ (IV) base class
 
 
@@ -375,7 +481,7 @@ class Datafile(BaseParse):
 
     def _dframesList(self):
         """
-        Parsing command-line and creating dataframes from given data files.
+        Parsing command-line and creating dataframe list from given data files.
         
         ( NOTE: all datafiles are entered before keyword 'cols' ).
         Creating a list of dataframes AFTER applying the given plot
@@ -419,46 +525,17 @@ class Datafile(BaseParse):
                 print s1+s2
                 sys.exit()
                 # creating plot name from the datafile name
+            # creating a preliminary list of dataframes
+            dframes.append(df)
             m = expr_filename.search(self.arglist[i])
             if m:
                 titles.append( m.group() )
             else:
                 titles.append( 'datafile '+str(i) )
-            if plot_options_given:
-                # split the dataframe into X and Y's
-                dfX = df.X
-                dfY = df.ix[:,1:]
-                for e in plot_options_given:
-                    # take care of basic options
-                    # except the log-scaling
-                    if e == 'absy':
-                        dfY = dfY.abs()
-                    elif e == 'absx':
-                        dfX = dfX.abs()
-                    elif e == 'absxy':
-                        dfY = dfY.abs()
-                        dfX = dfX.abs()
-                    # take care of user-defined options
-                    elif e not in plot_options_basic[3:]:
-                        dfX, dfY = self._dfTransform(dfX,dfY,e)
-                # take care of the log-scaling
-                # we take the absolute value
-                # after having taken care of all
-                # other plot options
-                if 'logy' in plot_options_given:
-                    dfY = dfY.abs()
-                elif 'logx' in plot_options_given:
-                    dfX = dfX.abs()
-                elif 'logxy' in plot_options_given:
-                    dfY = dfY.abs()
-                    dfX = dfX.abs()
-                # collecting dfX and dfY to get back df
-                dfY.insert(0,'X',dfX)
-                df = dfY
-                dframes.append( df )
-            else:
-                # no plot options
-                dframes.append( df )
+                
+        # list of transformed dataframes
+        # after applying plot options
+        dframes = self._dfTransformedList( dframes,plot_options_given )
         return dframes, titles
 
     def finalPlot(self):
@@ -490,41 +567,8 @@ class Datafile(BaseParse):
         filename = 'tmppyplot' + str( os.getpid() ) + '.pdf'
         
         dframes, titles = self._dframesList()
-        if 'logy' in sys.argv:
-            self._dfPlot(dframes,
-                   nrows=nrows,
-                   ncols=ncols,
-                   figsize=[7.5*ncols,5*nrows],
-                   logy=True,
-                   save=True,
-                   titles=titles,
-                   filename=filename) 
-        elif 'logx' in sys.argv:
-            self._dfPlot(dframes,
-                   nrows=nrows,
-                   ncols=ncols,
-                   figsize=[7.5*ncols,5*nrows],
-                   logx=True,
-                   save=True,
-                   titles=titles,
-                   filename=filename)
-        elif 'logxy' in sys.argv:
-            self._dfPlot(dframes,
-                   nrows=nrows,
-                   ncols=ncols,
-                   figsize=[7.5*ncols,5*nrows],
-                   loglog=True,
-                   save=True,
-                   titles=titles,
-                   filename=filename)
-        else:
-            self._dfPlot(dframes,
-                   nrows=nrows,
-                   ncols=ncols,
-                   figsize=[7.5*ncols,5*nrows],
-                   save=True,
-                   titles=titles,
-                   filename=filename)
+        # generating pdf plot 
+        self._plotpdf(dframes,self.arglist,nrows,ncols,filename,titles)
         return filename
 # --------------------- xxx ------------ (V) datafile class
 
@@ -545,9 +589,10 @@ class Database(BaseParse):
     def _tables(self):
         # finding out the number of tables entered by the user
         # "use" marks the end of table names
+        # and start of plot options
+        # in case of NO plot options, "use" may be omitted
         if 'use' not in self.arglist:
-            print 'missing keyword use which marks end of table names'
-            sys.exit()
+            end = len( self.arglist ) 
         for i,e in list( enumerate(self.arglist) ):
             if e=='use':
                 end = i
@@ -557,7 +602,9 @@ class Database(BaseParse):
         """
         Parsing command-line and creating dataframes from given DB TABLES.
         
-        ( NOTE: all tables are entered before keyword 'use' ).
+        ( NOTE: all tables are entered before keyword 'use'.
+          if no keyword "use", implies no plot options.
+          Alternatively, all plot options must be entered after "use".).
         Creating a list of dataframes AFTER applying the given plot
         options to the data, both basic and user defined plot options
         are implemented serially, i.e., in the same order as they appear
@@ -593,46 +640,17 @@ class Database(BaseParse):
                 # error reading table
                 print 'Table does not exist'
                 sys.exit()
+            # create preliminary list of dataframes
+            dframes.append( df )    
             m = expr_filename.search(self.arglist[i])
             if m:
                 titles.append( m.group() )
             else:
                 titles.append( 'datafile '+str(i) )
-            if plot_options_given:
-                # split the dataframe into X and Y's
-                dfX = df.ix[0,:]
-                dfY = df.ix[:,1:]
-                for e in plot_options_given:
-                    # take care of basic options
-                    # except the log-scaling
-                    if e == 'absy':
-                        dfY = dfY.abs()
-                    elif e == 'absx':
-                        dfX = dfX.abs()
-                    elif e == 'absxy':
-                        dfY = dfY.abs()
-                        dfX = dfX.abs()
-                    # take care of user-defined options
-                    elif e not in plot_options_basic[3:]:
-                        dfX, dfY = self._dfTransform(dfX,dfY,e)
-                # take care of the log-scaling
-                # we take the absolute value
-                # after having taken care of all
-                # other plot options
-                if 'logy' in plot_options_given:
-                    dfY = dfY.abs()
-                elif 'logx' in plot_options_given:
-                    dfX = dfX.abs()
-                elif 'logxy' in plot_options_given:
-                    dfY = dfY.abs()
-                    dfX = dfX.abs()
-                # collecting dfX and dfY to get back df
-                dfY.insert(0,'X',dfX)
-                df = dfY
-                dframes.append( df )
-            else:
-                # no plot options
-                dframes.append( df )
+
+        # list of transformed dataframes
+        # after applying plot options
+        dframes = self._dfTransformedList(dframes,plot_options_given)
         return dframes, titles
 
     def finalPlot(self):
@@ -643,7 +661,7 @@ class Database(BaseParse):
         """
         end = self._tables()
         # no. of plots or data files
-        nplots = end - 1
+        nplots = end - 5
         
         # figuring out the number of columns
         # and rows for the grid-plot
@@ -664,41 +682,8 @@ class Database(BaseParse):
         filename = 'tmppyplot' + str( os.getpid() ) + '.pdf'
         
         dframes, titles = self._dframesList()
-        if 'logy' in sys.argv:
-            self._dfPlot(dframes,
-                   nrows=nrows,
-                   ncols=ncols,
-                   figsize=[7.5*ncols,5*nrows],
-                   logy=True,
-                   save=True,
-                   titles=titles,
-                   filename=filename) 
-        elif 'logx' in sys.argv:
-            self._dfPlot(dframes,
-                   nrows=nrows,
-                   ncols=ncols,
-                   figsize=[7.5*ncols,5*nrows],
-                   logx=True,
-                   save=True,
-                   titles=titles,
-                   filename=filename)
-        elif 'logxy' in sys.argv:
-            self._dfPlot(dframes,
-                   nrows=nrows,
-                   ncols=ncols,
-                   figsize=[7.5*ncols,5*nrows],
-                   loglog=True,
-                   save=True,
-                   titles=titles,
-                   filename=filename)
-        else:
-            self._dfPlot(dframes,
-                   nrows=nrows,
-                   ncols=ncols,
-                   figsize=[7.5*ncols,5*nrows],
-                   save=True,
-                   titles=titles,
-                   filename=filename)
+        # generating pdf plot 
+        self._plotpdf(dframes,self.arglist,nrows,ncols,filename,titles)
         return filename
 # --------------------- xxx ------------ (VI) database class
 
@@ -706,7 +691,7 @@ class Database(BaseParse):
 # ----------------------- (VII) class instantiation -----------------------
 # creating instance of database or datafile
 # as per the command-line information
-# its kind of "case-select"-ion
+# its kind of "case-select" statement
 if 'db' in sys.argv:
     plotData = Database( sys.argv )
 else:
