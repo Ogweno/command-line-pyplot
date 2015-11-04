@@ -1,7 +1,7 @@
 ### Command-line plotting tool
-**pyplot** is a command-line plotting tool written in python. It uses matplotlib and pandas to create line plots from data files or tables from a database. In particular, it creates a tabular view of plots for *similar* data files/tables. This is primarily meant to quickly *view* data on the fly.
+**pyplot** is a command-line plotting tool written in python. It uses matplotlib and pandas to create line plots from tabular data. The source of the data can either be text data files or tables from a database. In particular, it creates a tabular or grid-like view of plots for *similar* data files/tables. This is primarily meant to quickly *view* data on the fly.
 
-### How to use it
+### How to use it with datafiles
 A typical instance of the command will look like this,
 
 ```
@@ -52,3 +52,14 @@ where, `a,b,c` are `+/-`floats, and `r = x,y,xy`. If any of `a,b,c = 0`, we can 
 as *datafile 1*, *datafile 2*, etc, in the order of their appearance in the command-ine.
 
 The plot appears as a *pdf* file, and is automatically opened using *evince*. After the plot window is closed, the plotted *pdf* file is automatically deleted! 
+
+### How to use it with tables from a database
+A typical instance of the command will look like this,
+
+```
+pauls:~$ pyplot db host user database table1 table2 use option1 option2 option3
+```
+
+where, `table1` and `table2` are the tables from the same database. We can have any number of tables, provided all the tables have numeric columns in the form of *X*, *Y0*, *Y1*, *Y2*, etc. They need not have same number of columns (a constraint we have in the datafile case). 
+
+In the absence of plot options, the keyword *use* can be omitted. The plot options are exactly similar to that of the datafile case, and they are implemented in the order of their appearance in the command-line.
