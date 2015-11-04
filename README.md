@@ -1,5 +1,5 @@
 ### Command-line plotting tool
-**pyplot** is a command-line plotting tool written in python. It uses matplotlib and pandas to create line plots from data files. In particular, it creates a tabular view of plots for *similar* data files. This is primarily meant to quickly *view* data files on the fly.
+**pyplot** is a command-line plotting tool written in python. It uses matplotlib and pandas to create line plots from data files or tables from a database. In particular, it creates a tabular view of plots for *similar* data files/tables. This is primarily meant to quickly *view* data on the fly.
 
 ### How to use it
 A typical instance of the command will look like this,
