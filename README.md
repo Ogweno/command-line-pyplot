@@ -62,7 +62,7 @@ pauls:~$ pyplot db host user database table1 table2 use option1 option2 option3
 
 where, `table1` and `table2` are the tables from the same database. We can have any number of tables, provided all the tables have numeric columns in the form of *X*, *Y0*, *Y1*, *Y2*, etc. They need not have same number of columns (a constraint we have in the datafile case). For simplicity on the command-line, only a single database is allowed.
 
-In the absence of plot options, the keyword *use* can be omitted. The plot options are exactly similar to that of the datafile case, and they are implemented in the order of their appearance in the command-line.
+In the absence of plot options, the keyword *use* can be omitted. The plot options are exactly similar to that of the datafile case, and they are implemented in the order of their appearance in the command-line. In the plotted file, plot titles reflect table names, and plot legends have the same header as the column names in each table.
 
 Once these details are entered, there will be a password prompt for connecting to the database. Following a successful connection, an *evince* plot window will appear!
 
