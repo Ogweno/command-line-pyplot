@@ -532,7 +532,7 @@ class Datafile(BaseParse):
                 titles.append( m.group() )
             else:
                 titles.append( 'datafile '+str(i) )
-                
+                            
         # list of transformed dataframes
         # after applying plot options
         dframes = self._dfTransformedList( dframes,plot_options_given )
@@ -615,9 +615,6 @@ class Database(BaseParse):
         plot_options_given = self._parsedOptions( self.arglist[end+1:] )
         plot_options_basic = self.plot_options_basic
         
-        # regex for table name
-        expr_filename = re.compile(r'\w+[-_]?\w+')
-
         # connect to database
         host = self.arglist[2]
         user = self.arglist[3]
@@ -641,12 +638,9 @@ class Database(BaseParse):
                 print 'Table does not exist'
                 sys.exit()
             # create preliminary list of dataframes
-            dframes.append( df )    
-            m = expr_filename.search(self.arglist[i])
-            if m:
-                titles.append( m.group() )
-            else:
-                titles.append( 'datafile '+str(i) )
+            dframes.append( df )
+            m = self.arglist[i] # attach table names
+            titles.append( m )
 
         # list of transformed dataframes
         # after applying plot options
