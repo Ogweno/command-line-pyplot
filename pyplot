@@ -71,7 +71,8 @@ def readcsv(filename,col=[]):
                     names=col,
                     sep=r"\s+",
                     skipinitialspace=True).dropna()
-    f = f.convert_objects(convert_numeric=True)
+    pd.to_numeric(f, errors='coerce')
+    #f = f.convert_objects(convert_numeric=True)
     f = f.fillna(method='bfill') 
     f.index = range(f.shape[0])
     return f
@@ -97,6 +98,7 @@ def dfplot(dframes,
            logx=False,logy=False,loglog=False,
            xlabel='',ylabel='',
            titles=[''],
+           grid=True,
            save=True,
            filename=''):
     fig = plt.figure(figsize=figsize)
@@ -119,6 +121,7 @@ def dfplot(dframes,
                              loglog=loglog,
                              color=colors,
                              legend=legend,
+                             grid=grid,
                              ax=ax)      
         ax.legend(loc='best', fancybox=True, framealpha=0.5)
         
