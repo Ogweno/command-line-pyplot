@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import MySQLdb as mdb
+import pymysql as pymdb
 import getpass
 # ------------------- xxx -------------------- (I) LIBRARIES
 
@@ -308,7 +309,8 @@ class BaseParse:
                         names=col,
                         sep=r"\s+",
                         skipinitialspace=True).dropna()
-        f = f.convert_objects(convert_numeric=True)
+        pd.to_numeric(f, errors='coerce')
+        #f = f.convert_objects(convert_numeric=True)
         f = f.fillna(method='bfill') 
         f.index = range(f.shape[0])
         return f
@@ -337,6 +339,7 @@ class BaseParse:
                 logx=False,logy=False,loglog=False,
                 xlabel='',ylabel='',
                 titles=[''],
+                grid=True,
                 save=True,
                 filename=''):
         """
@@ -361,12 +364,13 @@ class BaseParse:
             if i>=len(titles):
                 titles.append('')               
             ax = dframes[i].plot(x=dframes[i].columns.values[0],
-                             logy=logy,
-                             logx=logx,
-                             loglog=loglog,
-                             color=colors,
-                             legend=legend,
-                             ax=ax)      
+                                 logy=logy,
+                                 logx=logx,
+                                 loglog=loglog,
+                                 color=colors,
+                                 legend=legend,
+                                 grid=grid,
+                                 ax=ax)      
             ax.legend(loc='best', fancybox=True, framealpha=0.5)
         
             # some text
@@ -622,8 +626,9 @@ class Database(BaseParse):
         passwd = getpass.getpass()
         try:
             # check if succesful connection to DB is made
-            con = mdb.connect( host,user,passwd,database )
-        except mdb.OperationalError:
+            #con = mdb.connect( host,user,passwd,database )
+            con = pymdb.connect( host,user,passwd,database )
+        except pymdb.OperationalError:
             print 'Could not connect to database '+ database
             sys.exit()
         
@@ -633,9 +638,9 @@ class Database(BaseParse):
             try:
                 # checking if table exists
                 df = self._readsql( self.arglist[i],con )
-            except mdb.ProgrammingError:
+            except:
                 # error reading table
-                print 'Table does not exist'
+                print 'Table ' + str( self.arglist[i] ) + ' does not exist'
                 sys.exit()
             # create preliminary list of dataframes
             dframes.append( df )
